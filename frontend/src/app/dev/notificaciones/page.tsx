@@ -10,7 +10,7 @@ type SubmitState = {
 const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
 export default function DevNotificacionesPage() {
-  const [usuarioId, setUsuarioId] = useState('')
+  const [correo, setCorreo] = useState('')
   const [titulo, setTitulo] = useState('')
   const [mensaje, setMensaje] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -46,7 +46,7 @@ export default function DevNotificacionesPage() {
           Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({
-          usuarioId: Number(usuarioId),
+          correo,
           titulo,
           mensaje
         })
@@ -65,16 +65,13 @@ export default function DevNotificacionesPage() {
         message: data?.message || 'Notificación creada correctamente.'
       })
 
-      setUsuarioId('')
+      setCorreo('')
       setTitulo('')
       setMensaje('')
     } catch (error) {
       setSubmitState({
         type: 'error',
-        message:
-          error instanceof Error
-            ? error.message
-            : 'No se pudo crear la notificación.'
+        message: error instanceof Error ? error.message : 'No se pudo crear la notificación.'
       })
     } finally {
       setIsSubmitting(false)
@@ -84,12 +81,10 @@ export default function DevNotificacionesPage() {
   return (
     <main className="min-h-screen bg-stone-100 px-4 py-10">
       <section className="mx-auto max-w-xl rounded-2xl border border-stone-200 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-stone-900">
-          Enviar notificación de prueba
-        </h1>
+        <h1 className="text-2xl font-bold text-stone-900">Enviar notificación de prueba</h1>
 
         <p className="mt-2 text-sm text-stone-600">
-          Esta vista sirve para insertar una notificación manualmente y probar la campanita, el correo y la bandeja.
+          Inserta una notificación usando el correo del destinatario.
         </p>
 
         {submitState.type !== 'idle' ? (
@@ -106,17 +101,16 @@ export default function DevNotificacionesPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
-            <label htmlFor="usuarioId" className="mb-1 block text-sm font-medium text-stone-700">
-              ID de usuario
+            <label htmlFor="correo" className="mb-1 block text-sm font-medium text-stone-700">
+              Correo del destinatario
             </label>
             <input
-              id="usuarioId"
-              type="number"
-              min={1}
-              value={usuarioId}
-              onChange={(event) => setUsuarioId(event.target.value)}
+              id="correo"
+              type="email"
+              value={correo}
+              onChange={(event) => setCorreo(event.target.value)}
               className="w-full rounded-xl border border-stone-300 px-4 py-2.5 text-sm outline-none transition focus:border-amber-500"
-              placeholder="Ejemplo: 1"
+              placeholder="usuario@gmail.com"
               required
             />
           </div>

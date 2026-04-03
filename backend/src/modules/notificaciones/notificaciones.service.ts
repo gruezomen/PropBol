@@ -8,7 +8,7 @@ import {
   markNotificationAsReadRepository,
   softDeleteNotificationRepository
 } from '../notificaciones/notificaciones.repository.js'
-import { findUserById } from '../auth/auth.repository.js'
+import { findUserByCorreo } from '../auth/auth.repository.js'
 import { sendNotificationEmail } from '../email/notification-email.service.js'
 
 type NotificationFilter = 'todas' | 'leida' | 'no leida' | 'archivada'
@@ -21,7 +21,7 @@ type GetNotificationsParams = {
 }
 
 type CreateNotificationParams = {
-  usuarioId: number
+  correo: string
   titulo: string
   mensaje: string
 }
@@ -66,12 +66,6 @@ const normalizeOffset = (offset?: number) => {
 const validateNotificationId = (id: number) => {
   if (!Number.isInteger(id) || id <= 0) {
     throw new ServiceError('El id de la notificación no es válido', 400)
-  }
-}
-
-const validateUserId = (usuarioId: number) => {
-  if (!Number.isInteger(usuarioId) || usuarioId <= 0) {
-    throw new ServiceError('El usuario no es válido', 400)
   }
 }
 
@@ -139,14 +133,17 @@ export const getUnreadCountService = async (usuarioId: number) => {
 }
 
 export const createNotificationService = async ({
-  usuarioId,
+  correo,
   titulo,
   mensaje
 }: CreateNotificationParams) => {
-  validateUserId(usuarioId)
-
+  const normalizedCorreo = correo.trim().toLowerCase()
   const normalizedTitle = titulo.trim()
   const normalizedMessage = mensaje.trim()
+
+  if (!normalizedCorreo) {
+    throw new ServiceError('El correo del destinatario es obligatorio', 400)
+  }
 
   if (!normalizedTitle) {
     throw new ServiceError('El título de la notificación es obligatorio', 400)
@@ -156,16 +153,20 @@ export const createNotificationService = async ({
     throw new ServiceError('El mensaje de la notificación es obligatorio', 400)
   }
 
+  const user = await findUserByCorreo(normalizedCorreo)
+
+  if (!user) {
+    throw new ServiceError('No existe un usuario con ese correo', 404)
+  }
+
   const notification = await createNotificationRepository({
-    usuarioId,
+    usuarioId: user.id,
     titulo: normalizedTitle,
     mensaje: normalizedMessage
   })
 
   try {
-    const user = await findUserById(usuarioId)
-
-    if (user?.correo) {
+    if (user.correo) {
       await sendNotificationEmail({
         emailDestino: user.correo,
         titulo: notification.titulo,

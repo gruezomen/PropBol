@@ -20,7 +20,7 @@ type NotificationParams = {
 }
 
 type CreateNotificationBody = {
-  usuarioId?: number | string
+  correo?: string
   titulo?: string
   mensaje?: string
 }
@@ -123,11 +123,8 @@ export const createNotificationController = async (
       })
     }
 
-    const bodyUserId =
-      req.body.usuarioId !== undefined ? Number(req.body.usuarioId) : authenticatedUserId
-
     const result = await createNotificationService({
-      usuarioId: bodyUserId,
+      correo: req.body.correo ?? '',
       titulo: req.body.titulo ?? '',
       mensaje: req.body.mensaje ?? ''
     })
