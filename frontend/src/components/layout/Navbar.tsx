@@ -51,6 +51,8 @@ export default function Navbar() {
     error,
     isOnline,
     notificationRef,
+    scrollContainerRef,
+    saveScrollPosition,
     toggleNotifications,
     setFilter,
     markAsRead,
@@ -64,19 +66,19 @@ export default function Navbar() {
   } = useNotifications()
 
   const clearSession = (emitEvent = true) => {
-  localStorage.removeItem(USER_STORAGE_KEY);
-  localStorage.removeItem(SESSION_EXPIRES_KEY);
-  localStorage.removeItem("token");
-  setUser(null);
-  setIsPanelOpen(false);
-  setShowLogoutModal(false);
-  setIsLoggedIn(false);
+    localStorage.removeItem(USER_STORAGE_KEY);
+    localStorage.removeItem(SESSION_EXPIRES_KEY);
+    localStorage.removeItem("token");
+    setUser(null);
+    setIsPanelOpen(false);
+    setShowLogoutModal(false);
+    setIsLoggedIn(false);
 
-  if (emitEvent) {
-    window.dispatchEvent(new Event("propbol:session-changed"));
-    window.dispatchEvent(new Event("auth-state-changed"));
-  }
-};
+    if (emitEvent) {
+      window.dispatchEvent(new Event("propbol:session-changed"));
+      window.dispatchEvent(new Event("auth-state-changed"));
+    }
+  };
 
   const isSessionExpired = () => {
     const expiresAt = localStorage.getItem(SESSION_EXPIRES_KEY)
@@ -85,27 +87,27 @@ export default function Navbar() {
   }
 
   const restoreSession = () => {
-  const savedUser = localStorage.getItem(USER_STORAGE_KEY);
-  const expiresAt = localStorage.getItem(SESSION_EXPIRES_KEY);
-  const token = localStorage.getItem("token");
+    const savedUser = localStorage.getItem(USER_STORAGE_KEY);
+    const expiresAt = localStorage.getItem(SESSION_EXPIRES_KEY);
+    const token = localStorage.getItem("token");
 
-  if (!savedUser || !expiresAt || !token) {
-    clearSession(false);
-    return;
-  }
+    if (!savedUser || !expiresAt || !token) {
+      clearSession(false);
+      return;
+    }
 
-  if (Date.now() > Number(expiresAt)) {
-    clearSession(false);
-    return;
-  }
+    if (Date.now() > Number(expiresAt)) {
+      clearSession(false);
+      return;
+    }
 
-  try {
-    setUser(JSON.parse(savedUser));
-    setIsLoggedIn(true);
-  } catch {
-    clearSession(false);
-  }
-};
+    try {
+      setUser(JSON.parse(savedUser));
+      setIsLoggedIn(true);
+    } catch {
+      clearSession(false);
+    }
+  };
 
   useEffect(() => {
     restoreSession()
@@ -345,12 +347,16 @@ export default function Navbar() {
                         </div>
 
                         <div
+                          ref={scrollContainerRef}
                           role="list"
                           aria-label="Lista de notificaciones"
                           aria-live="polite"
                           className="max-h-[60vh] overflow-y-auto sm:max-h-80"
                           onScroll={(e) => {
                             const target = e.currentTarget
+
+                            saveScrollPosition(target.scrollTop)
+
                             const reachedBottom =
                               target.scrollTop + target.clientHeight >= target.scrollHeight - 10
 
@@ -470,7 +476,6 @@ export default function Navbar() {
                 />
               </div>
 
-              {/* Botón de Hamburguesa para móvil */}
               <button
                 type="button"
                 onClick={toggleMobileMenu}
@@ -492,7 +497,6 @@ export default function Navbar() {
         onConfirm={handleConfirmLogout}
       />
 
-      {/* Panel de Menú Móvil */}
       {isMobileMenuOpen && (
         <div
           className="fixed inset-0 z-50 bg-black/40 md:hidden"

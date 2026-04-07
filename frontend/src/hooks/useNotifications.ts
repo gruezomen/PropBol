@@ -94,6 +94,8 @@ export function useNotifications() {
   )
 
   const notificationRef = useRef<HTMLDivElement>(null)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const savedScrollTopRef = useRef(0)
   const instanceId = useRef(`notifications-${Math.random().toString(36).slice(2)}`)
 
   const clearNotificationsState = useCallback(() => {
@@ -106,6 +108,7 @@ export function useNotifications() {
     setShowSkeleton(false)
     setIsLoadingMore(false)
     setIsLoggedIn(false)
+    savedScrollTopRef.current = 0
   }, [])
 
   const emitNotificationsUpdated = useCallback(() => {
@@ -115,6 +118,10 @@ export function useNotifications() {
         detail: { source: instanceId.current }
       })
     )
+  }, [])
+
+  const saveScrollPosition = useCallback((value: number) => {
+    savedScrollTopRef.current = value
   }, [])
 
   const refreshNotifications = useCallback(
@@ -317,6 +324,32 @@ export function useNotifications() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!open) return
+
+    const restoreScroll = () => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = savedScrollTopRef.current
+      }
+    }
+
+    restoreScroll()
+
+    const frame = window.requestAnimationFrame(restoreScroll)
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+    }
+  }, [open, notifications.length])
+
+  useEffect(() => {
+    savedScrollTopRef.current = 0
+
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+  }, [filter])
+
   const filteredNotifications = useMemo(() => notifications, [notifications])
   const visibleNotifications = useMemo(() => notifications, [notifications])
 
@@ -344,6 +377,8 @@ export function useNotifications() {
     error,
     isOnline,
     notificationRef,
+    scrollContainerRef,
+    saveScrollPosition,
     toggleNotifications,
     setFilter,
     markAsRead,
