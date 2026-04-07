@@ -38,6 +38,7 @@ export function useInactivityLogout({ onWarning, onLogout }: UseInactivityLogout
     localStorage.removeItem(TOKEN_STORAGE_KEY)
     localStorage.removeItem(USER_STORAGE_KEY)
     localStorage.removeItem(SESSION_EXPIRES_KEY)
+    localStorage.removeItem('propbol_session_verified')
     window.dispatchEvent(new Event('propbol:session-changed'))
   }, [])
 

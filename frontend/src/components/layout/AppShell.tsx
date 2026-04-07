@@ -12,6 +12,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 const USER_STORAGE_KEY = 'propbol_user'
 const SESSION_EXPIRES_KEY = 'propbol_session_expires'
 const TOKEN_STORAGE_KEY = 'token'
+const SESSION_VERIFIED_KEY = 'propbol_session_verified'
 
 function SessionManager() {
   const [showWarning, setShowWarning] = useState(false)
@@ -54,6 +55,7 @@ const clearSession = () => {
   localStorage.removeItem(USER_STORAGE_KEY)
   localStorage.removeItem(SESSION_EXPIRES_KEY)
   localStorage.removeItem(TOKEN_STORAGE_KEY)
+  localStorage.removeItem(SESSION_VERIFIED_KEY)
 }
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
@@ -85,8 +87,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           }
         })
 
-        if (!response.ok) {
+        if (response.status === 401) {
           clearSession()
+          window.dispatchEvent(new Event('propbol:session-changed'))
+          return
+        }
+
+        if (!response.ok) {
+          localStorage.setItem(SESSION_VERIFIED_KEY, 'false')
           window.dispatchEvent(new Event('propbol:session-changed'))
           return
         }
@@ -106,15 +114,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           })
         )
 
+        localStorage.setItem(SESSION_VERIFIED_KEY, 'true')
         window.dispatchEvent(new Event('propbol:session-changed'))
       } catch {
-        clearSession()
+        localStorage.setItem(SESSION_VERIFIED_KEY, 'false')
         window.dispatchEvent(new Event('propbol:session-changed'))
       }
     }
 
     validateSession()
-  }, [pathname, API_URL])
+  }, [pathname])
 
   if (isAuthRoute) {
     return <>{children}</>
