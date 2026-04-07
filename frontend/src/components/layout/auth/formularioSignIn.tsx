@@ -328,7 +328,7 @@ export default function LoginForm() {
 
         if (response.status === 404) {
           setErrorMessage(
-            "Esta cuenta no está registrada. Puedes registrarte para crear una cuenta.",
+            "Este usuario no está registrado. Puedes crear una cuenta para continuar.",
           );
           return;
         }
