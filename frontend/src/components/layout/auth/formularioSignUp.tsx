@@ -346,8 +346,19 @@ export default function SignUpForm() {
     setShowConfirmPassword(false)
     setServerError('')
     setIsSubmitting(false)
-    router.push('/')
   }
+
+  const hasFormContent = useMemo(() => {
+    return (
+      formData.email.trim() !== '' ||
+      formData.firstName.trim() !== '' ||
+      formData.lastName.trim() !== '' ||
+      formData.phone.trim() !== '' ||
+      formData.password.trim() !== '' ||
+      formData.confirmPassword.trim() !== '' ||
+      serverError !== ''
+    )
+  }, [formData, serverError])
 
   const isFormValid = useMemo(() => {
     const requiredFieldsCompleted =
@@ -698,12 +709,17 @@ export default function SignUpForm() {
               disabled={isSubmitting}
             />
 
-            <button
+           <button
               type="button"
               onClick={handleCancel}
-              className="mx-auto block rounded-md bg-[#292524] px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-[#1c1917]"
+              disabled={!hasFormContent}
+              className={`mx-auto block rounded-md px-4 py-2 text-[11px] font-semibold transition ${
+                hasFormContent
+                  ? "bg-[#292524] text-white hover:bg-[#1c1917]"
+                  : "cursor-not-allowed bg-[#d6d3d1] text-[#a8a29e]"
+              }`}
             >
-              Cancelar registro
+               Cancelar registro
             </button>
 
             <p className="pt-1 text-center text-[12px] text-[#78716c]">
@@ -715,6 +731,14 @@ export default function SignUpForm() {
                 Inicia sesión
               </Link>
             </p>
+
+            <button
+              type="button"
+              onClick={() => router.push("/")}
+              className="mt-2 w-full text-center text-[12px] font-medium text-[#57534e] underline transition hover:text-[#292524]"
+            >
+              Ir a la página principal
+            </button>
           </form>
         </div>
       </div>
