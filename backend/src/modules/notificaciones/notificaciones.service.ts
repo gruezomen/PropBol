@@ -74,13 +74,15 @@ const mapNotificationToFrontend = (notification: {
   mensaje: string
   leida: boolean
   archivada?: boolean
+  fechaCreacion?: Date
 }) => {
   return {
     id: notification.id,
     title: notification.titulo,
     description: notification.mensaje,
     status: notification.leida ? 'leida' : 'no leida',
-    archivada: notification.archivada ?? false
+    archivada: notification.archivada ?? false,
+    fechaCreacion: notification.fechaCreacion ?? null
   }
 }
 

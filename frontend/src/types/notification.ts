@@ -8,6 +8,7 @@ export type NotificationItem = {
   description: string
   status: NotificationStatus
   archivada: boolean
+  fechaCreacion: string | null
 }
 
 export type NotificationsResponse = {

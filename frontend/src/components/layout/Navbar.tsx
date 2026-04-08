@@ -25,16 +25,19 @@ const SESSION_DURATION_MS = 60 * 60 * 1000
 
 const filters: NotificationFilter[] = ['todas', 'leida', 'no leida', 'archivada']
 
+
 export default function Navbar() {
   const router = useRouter()
   const panelRef = useRef<HTMLDivElement | null>(null)
   const notificationPanelRef = useRef<HTMLDivElement | null>(null)
+  const [, setTick] = useState(0)
 
   const [user, setUser] = useState<User | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [showLogoutModal, setShowLogoutModal] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  
 
   const {
     open,
@@ -125,6 +128,26 @@ export default function Navbar() {
       clearSession(false)
     }
   }
+
+  const formatRelativeTime = (fecha: string | null): string => {
+    if (!fecha) return ''
+    const diff = Date.now() - new Date(fecha).getTime()
+    const mins = Math.floor(diff / 60000)
+    if (mins < 1) return 'hace un momento'
+    if (mins < 60) return `hace ${mins} min`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `hace ${hours} h`
+    const days = Math.floor(hours / 24)
+    if (days < 7) return `hace ${days} d`
+    return new Date(fecha).toLocaleDateString('es-BO', { day: 'numeric', month: 'short' })
+  }
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTick((t) => t + 1)
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [])
 
   useEffect(() => {
     restoreSession()
@@ -383,6 +406,11 @@ export default function Navbar() {
                                       <span className="mt-2 inline-block text-[10px] uppercase text-stone-400">
                                         {notification.status}
                                       </span>
+                                      {notification.fechaCreacion && (
+                                        <span className="mt-0.5 block text-[10px] text-stone-400">
+                                          {formatRelativeTime(notification.fechaCreacion)}
+                                        </span>
+                                      )}
                                     </div>
                                     <div className="flex shrink-0 items-center gap-2">
                                       {notification.status === 'no leida' && (
