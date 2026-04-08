@@ -1,18 +1,18 @@
-import { PrismaClient } from '@prisma/client'
-import { PrismaPg } from '@prisma/adapter-pg'
-import pg from 'pg'
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
 const globalForDb = globalThis as unknown as {
   prisma?: PrismaClient;
   pgPool?: pg.Pool;
 };
 
-const pool =
-  globalForDb.pgPool ??
-  new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    max: 5,
-  });
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 2,
+  idleTimeoutMillis: 10000,
+  connectionTimeoutMillis: 10000,
+});
 
 const prisma =
   globalForDb.prisma ??
