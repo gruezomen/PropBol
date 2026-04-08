@@ -125,9 +125,12 @@ app.get('/notificaciones/stream', async (req, res) => {
     res.flushHeaders?.()
 
     const sendEvent = (payload: NotificationRealtimeEvent) => {
-      res.write(`event: notifications-updated\n`)
-      res.write(`data: ${JSON.stringify(payload)}\n\n`)
-    }
+     const eventName =
+      payload.type === 'connected' ? 'connected' : 'notifications-updated'
+
+       res.write(`event: ${eventName}\n`)
+       res.write(`data: ${JSON.stringify(payload)}\n\n`)
+       }
 
     sendEvent({
       type: 'connected',
@@ -154,8 +157,7 @@ app.get('/notificaciones/stream', async (req, res) => {
       res.end()
     })
 
-    emitNotificationEvent(usuarioId, 'connected')
-  } catch {
+} catch {
     return res.status(401).json({
       message: 'Token inválido'
     })
