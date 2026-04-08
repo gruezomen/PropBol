@@ -46,6 +46,8 @@ export default function Navbar() {
     error,
     isOnline,
     notificationRef,
+    scrollContainerRef,
+    saveScrollPosition,
     toggleNotifications,
     setFilter,
     markAsRead,
@@ -315,14 +317,19 @@ export default function Navbar() {
                         </div>
 
                         <div
+                          ref={scrollContainerRef}
                           role="list"
                           aria-label="Lista de notificaciones"
                           aria-live="polite"
                           className="max-h-[60vh] overflow-y-auto sm:max-h-80"
                           onScroll={(e) => {
                             const target = e.currentTarget
+
+                            saveScrollPosition(target.scrollTop)
+
                             const reachedBottom =
                               target.scrollTop + target.clientHeight >= target.scrollHeight - 10
+
                             if (reachedBottom && hasMore && !isLoadingMore) {
                               void loadMoreNotifications()
                             }
