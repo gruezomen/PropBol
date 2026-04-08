@@ -5,6 +5,7 @@ import { env } from './config/env.js'
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { propertiesController } from './modules/properties/properties.controller.js'
 import {
+  archiveNotificationController,
   createNotificationController,
   deleteNotificationController,
   getNotificationsController,
@@ -125,12 +126,11 @@ app.get('/notificaciones/stream', async (req, res) => {
     res.flushHeaders?.()
 
     const sendEvent = (payload: NotificationRealtimeEvent) => {
-     const eventName =
-      payload.type === 'connected' ? 'connected' : 'notifications-updated'
+      const eventName = payload.type === 'connected' ? 'connected' : 'notifications-updated'
 
-       res.write(`event: ${eventName}\n`)
-       res.write(`data: ${JSON.stringify(payload)}\n\n`)
-       }
+      res.write(`event: ${eventName}\n`)
+      res.write(`data: ${JSON.stringify(payload)}\n\n`)
+    }
 
     sendEvent({
       type: 'connected',
@@ -156,8 +156,7 @@ app.get('/notificaciones/stream', async (req, res) => {
       unsubscribe()
       res.end()
     })
-
-} catch {
+  } catch {
     return res.status(401).json({
       message: 'Token inválido'
     })
@@ -170,6 +169,7 @@ app.get('/notificaciones/unread-count', requireAuth, getUnreadCountController)
 app.patch('/notificaciones/:id/read', requireAuth, markNotificationAsReadController)
 app.patch('/notificaciones/read-all', requireAuth, markAllNotificationsAsReadController)
 app.delete('/notificaciones/:id', requireAuth, deleteNotificationController)
+app.patch('/notificaciones/:id/archivar', requireAuth, archiveNotificationController)
 
 app.post('/api/publicaciones', (req, res) => {
   const nuevaPublicacion = req.body

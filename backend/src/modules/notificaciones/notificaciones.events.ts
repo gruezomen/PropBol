@@ -6,6 +6,7 @@ export type NotificationRealtimeEventType =
   | 'read'
   | 'read-all'
   | 'deleted'
+  | 'archived'
 
 export type NotificationRealtimeEvent = {
   type: NotificationRealtimeEventType

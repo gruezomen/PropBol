@@ -143,81 +143,76 @@ export function useNotifications() {
   }, [])
 
   const refreshNotifications = useCallback(
-  async (
-    nextFilter: NotificationFilter,
-    options: RefreshOptions = {}
-  ) => {
-    const silent = options.silent ?? false
+    async (nextFilter: NotificationFilter, options: RefreshOptions = {}) => {
+      const silent = options.silent ?? false
 
-    const token = getStoredToken()
-    if (!token) {
-      clearNotificationsState()
-      return
-    }
-
-    if (!window.navigator.onLine) {
-      return
-    }
-
-    let skeletonTimer: number | null = null
-
-    if (!silent) {
-      setIsLoading(true)
-      setError(null)
-
-      skeletonTimer = window.setTimeout(() => {
-        setShowSkeleton(true)
-      }, SKELETON_DELAY_MS)
-    }
-
-    try {
-      const [notificationsResponse, unreadCountResponse] = await Promise.all([
-        requestJson<NotificationsResponse>(
-          buildNotificationsUrl(nextFilter, ITEMS_PER_LOAD, 0)
-        ),
-        requestJson<UnreadCountResponse>(`${API_URL}/notificaciones/unread-count`)
-      ])
-
-      setNotifications(notificationsResponse.items)
-      setTotal(notificationsResponse.total)
-      setUnreadCount(unreadCountResponse.unreadCount)
-      setIsLoggedIn(true)
-      setError(null)
-    } catch (err) {
-      if (!window.navigator.onLine) {
-        return
-      }
-
-      const error = err as Error & { status?: number }
-      const technicalMessage = error.message.toLowerCase()
-
-      if (
-        technicalMessage.includes('no autorizado') ||
-        technicalMessage.includes('token') ||
-        error.status === 401
-      ) {
+      const token = getStoredToken()
+      if (!token) {
         clearNotificationsState()
         return
       }
 
-      if (error.status === 500) {
-        setError('Ocurrió un problema al cargar las notificaciones.')
-      } else {
-        setError('No se pudieron cargar las notificaciones.')
-      }
-    } finally {
-      if (skeletonTimer !== null) {
-        window.clearTimeout(skeletonTimer)
+      if (!window.navigator.onLine) {
+        return
       }
 
+      let skeletonTimer: number | null = null
+
       if (!silent) {
-        setIsLoading(false)
-        setShowSkeleton(false)
+        setIsLoading(true)
+        setError(null)
+
+        skeletonTimer = window.setTimeout(() => {
+          setShowSkeleton(true)
+        }, SKELETON_DELAY_MS)
       }
-    }
-  },
-  [clearNotificationsState]
-)
+
+      try {
+        const [notificationsResponse, unreadCountResponse] = await Promise.all([
+          requestJson<NotificationsResponse>(buildNotificationsUrl(nextFilter, ITEMS_PER_LOAD, 0)),
+          requestJson<UnreadCountResponse>(`${API_URL}/notificaciones/unread-count`)
+        ])
+
+        setNotifications(notificationsResponse.items)
+        setTotal(notificationsResponse.total)
+        setUnreadCount(unreadCountResponse.unreadCount)
+        setIsLoggedIn(true)
+        setError(null)
+      } catch (err) {
+        if (!window.navigator.onLine) {
+          return
+        }
+
+        const error = err as Error & { status?: number }
+        const technicalMessage = error.message.toLowerCase()
+
+        if (
+          technicalMessage.includes('no autorizado') ||
+          technicalMessage.includes('token') ||
+          error.status === 401
+        ) {
+          clearNotificationsState()
+          return
+        }
+
+        if (error.status === 500) {
+          setError('Ocurrió un problema al cargar las notificaciones.')
+        } else {
+          setError('No se pudieron cargar las notificaciones.')
+        }
+      } finally {
+        if (skeletonTimer !== null) {
+          window.clearTimeout(skeletonTimer)
+        }
+
+        if (!silent) {
+          setIsLoading(false)
+          setShowSkeleton(false)
+        }
+      }
+    },
+    [clearNotificationsState]
+  )
 
   const loadMoreNotifications = useCallback(async () => {
     const token = getStoredToken()
@@ -281,13 +276,22 @@ export function useNotifications() {
     [emitNotificationsUpdated, filter, refreshNotifications]
   )
 
+  const archiveNotification = useCallback(
+    async (id: number) => {
+      await requestJson(`${API_URL}/notificaciones/${id}/archivar`, { method: 'PATCH' })
+      await refreshNotifications(filter)
+      emitNotificationsUpdated()
+    },
+    [emitNotificationsUpdated, filter, refreshNotifications]
+  )
+
   const hasMore = notifications.length < total
 
- useEffect(() => {
-  const handleOnline = () => {
-    setIsOnline(true)
-    void refreshNotifications(filter, { silent: true })
-  }
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      void refreshNotifications(filter, { silent: true })
+    }
 
     const handleOffline = () => {
       setIsOnline(false)
@@ -312,12 +316,12 @@ export function useNotifications() {
     void refreshNotifications(filter)
   }, [filter, refreshNotifications])
 
-useEffect(() => {
-  const handleNotificationsUpdated = (event: Event) => {
-    const customEvent = event as CustomEvent<{ source?: string }>
-    if (customEvent.detail?.source === instanceId.current) return
-    void refreshNotifications(filter, { silent: true })
-  }
+  useEffect(() => {
+    const handleNotificationsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{ source?: string }>
+      if (customEvent.detail?.source === instanceId.current) return
+      void refreshNotifications(filter, { silent: true })
+    }
 
     window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdated)
 
@@ -326,15 +330,15 @@ useEffect(() => {
     }
   }, [filter, refreshNotifications])
 
- useEffect(() => {
-  const handleAuthStateChanged = () => {
-    if (!getStoredToken()) {
-      clearNotificationsState()
-      return
-    }
+  useEffect(() => {
+    const handleAuthStateChanged = () => {
+      if (!getStoredToken()) {
+        clearNotificationsState()
+        return
+      }
 
-    void refreshNotifications(filter, { silent: true })
-  }
+      void refreshNotifications(filter, { silent: true })
+    }
 
     const handleStorage = (event: StorageEvent) => {
       if (
@@ -416,26 +420,24 @@ useEffect(() => {
 
     eventSourceRef.current = eventSource
 
-    eventSource.addEventListener('connected', () => {
-})
+    eventSource.addEventListener('connected', () => {})
 
-eventSource.addEventListener('notifications-updated', () => {
-  void refreshNotifications(filter, { silent: true })
-})
+    eventSource.addEventListener('notifications-updated', () => {
+      void refreshNotifications(filter, { silent: true })
+    })
 
-eventSource.addEventListener('ping', () => {})
-
+    eventSource.addEventListener('ping', () => {})
 
     eventSource.onerror = () => {
-  eventSource.close()
-  eventSourceRef.current = null
+      eventSource.close()
+      eventSourceRef.current = null
 
-  window.setTimeout(() => {
-    const latestToken = getStoredToken()
-    if (!latestToken || !window.navigator.onLine) return
-    void refreshNotifications(filter, { silent: true })
-  }, 2000)
-}
+      window.setTimeout(() => {
+        const latestToken = getStoredToken()
+        if (!latestToken || !window.navigator.onLine) return
+        void refreshNotifications(filter, { silent: true })
+      }, 2000)
+    }
 
     return () => {
       eventSource.close()
@@ -468,6 +470,7 @@ eventSource.addEventListener('ping', () => {})
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    archiveNotification,
     loadMoreNotifications,
     hasMore,
     refreshNotifications,

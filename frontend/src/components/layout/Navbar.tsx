@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Bell, CheckCheck, Loader2, Menu, Trash2, WifiOff, X } from 'lucide-react'
+import { Archive, Bell, CheckCheck, Loader2, Menu, Trash2, WifiOff, X } from 'lucide-react'
 
 import Logo from '../navbar/Logo'
 import NavLinks from '../navbar/NavLinks'
@@ -23,7 +23,7 @@ const SESSION_EXPIRES_KEY = 'propbol_session_expires'
 const SESSION_VERIFIED_KEY = 'propbol_session_verified'
 const SESSION_DURATION_MS = 60 * 60 * 1000
 
-const filters: NotificationFilter[] = ['todas', 'leida', 'no leida']
+const filters: NotificationFilter[] = ['todas', 'leida', 'no leida', 'archivada']
 
 export default function Navbar() {
   const router = useRouter()
@@ -53,6 +53,7 @@ export default function Navbar() {
     markAsRead,
     markAllAsRead,
     deleteNotification,
+    archiveNotification,
     loadMoreNotifications,
     hasMore,
     refreshNotifications,
@@ -311,7 +312,9 @@ export default function Navbar() {
                                 ? 'Todas'
                                 : item === 'leida'
                                   ? 'Leídas'
-                                  : 'No leídas'}
+                                  : item === 'no leida'
+                                    ? 'No leídas'
+                                    : 'Archivadas'} 
                             </button>
                           ))}
                         </div>
@@ -390,6 +393,17 @@ export default function Navbar() {
                                           className="text-xs text-amber-600 transition hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-40"
                                         >
                                           Leer
+                                        </button>
+                                      )}
+                                      {!notification.archivada && (
+                                        <button
+                                          type="button"
+                                          onClick={() => void archiveNotification(notification.id)}
+                                          disabled={!isOnline}
+                                          aria-label="Archivar notificación"
+                                          className="text-stone-400 transition hover:text-amber-600 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                          <Archive className="h-4 w-4" /> 
                                         </button>
                                       )}
                                       <button

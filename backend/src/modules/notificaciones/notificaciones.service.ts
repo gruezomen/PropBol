@@ -1,4 +1,5 @@
 import {
+  archiveNotificationRepository,
   countNotificationsByUserRepository,
   countUnreadNotificationsRepository,
   createNotificationRepository,
@@ -13,7 +14,6 @@ import { sendNotificationEmail } from '../email/notification-email.service.js'
 import { emitNotificationEvent } from './notificaciones.events.js'
 
 type NotificationFilter = 'todas' | 'leida' | 'no leida' | 'archivada'
-type SupportedNotificationFilter = Exclude<NotificationFilter, 'archivada'>
 
 type GetNotificationsParams = {
   filter?: string
@@ -52,7 +52,6 @@ const normalizeLimit = (limit?: number) => {
   if (!Number.isFinite(limit) || !limit || limit < 1) {
     return DEFAULT_LIMIT
   }
-
   return Math.min(limit, MAX_LIMIT)
 }
 
@@ -60,7 +59,6 @@ const normalizeOffset = (offset?: number) => {
   if (!Number.isFinite(offset) || offset === undefined || offset < 0) {
     return DEFAULT_OFFSET
   }
-
   return offset
 }
 
@@ -75,12 +73,14 @@ const mapNotificationToFrontend = (notification: {
   titulo: string
   mensaje: string
   leida: boolean
+  archivada?: boolean
 }) => {
   return {
     id: notification.id,
     title: notification.titulo,
     description: notification.mensaje,
-    status: notification.leida ? 'leida' : 'no leida'
+    status: notification.leida ? 'leida' : 'no leida',
+    archivada: notification.archivada ?? false
   }
 }
 
@@ -92,28 +92,16 @@ export const getNotificationsService = async (
   const limit = normalizeLimit(params.limit)
   const offset = normalizeOffset(params.offset)
 
-  if (filter === 'archivada') {
-    return {
-      items: [],
-      total: 0,
-      limit,
-      offset,
-      message: 'El filtro archivada no está disponible con la estructura actual de la BD.'
-    }
-  }
-
-  const supportedFilter = filter as SupportedNotificationFilter
-
   const [notifications, total] = await Promise.all([
     findNotificationsByUserRepository({
       usuarioId,
-      filter: supportedFilter,
+      filter,
       limit,
       offset
     }),
     countNotificationsByUserRepository({
       usuarioId,
-      filter: supportedFilter
+      filter
     })
   ])
 
@@ -127,7 +115,6 @@ export const getNotificationsService = async (
 
 export const getUnreadCountService = async (usuarioId: number) => {
   const unreadCount = await countUnreadNotificationsRepository(usuarioId)
-
   return {
     unreadCount
   }
@@ -215,7 +202,8 @@ export const markNotificationAsReadService = async (id: number, usuarioId: numbe
       id: notification.id,
       title: notification.titulo,
       description: notification.mensaje,
-      status: 'leida'
+      status: 'leida',
+      archivada: notification.archivada ?? false
     }
   }
 }
@@ -257,5 +245,33 @@ export const deleteNotificationService = async (id: number, usuarioId: number) =
 
   return {
     message: 'Notificación eliminada correctamente'
+  }
+}
+
+export const archiveNotificationService = async (id: number, usuarioId: number) => {
+  validateNotificationId(id)
+
+  const notification = await findNotificationByIdRepository({
+    id,
+    usuarioId
+  })
+
+  if (!notification) {
+    throw new ServiceError('Notificación no encontrada', 404)
+  }
+
+  if (notification.archivada) {
+    return {
+      message: 'La notificación ya estaba archivada',
+      item: mapNotificationToFrontend(notification)
+    }
+  }
+
+  await archiveNotificationRepository({ id, usuarioId })
+  emitNotificationEvent(usuarioId, 'archived', id)
+
+  return {
+    message: 'Notificación archivada correctamente',
+    item: mapNotificationToFrontend({ ...notification, archivada: true })
   }
 }
