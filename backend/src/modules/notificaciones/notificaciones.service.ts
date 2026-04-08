@@ -10,6 +10,7 @@ import {
 } from '../notificaciones/notificaciones.repository.js'
 import { findUserByCorreo } from '../auth/auth.repository.js'
 import { sendNotificationEmail } from '../email/notification-email.service.js'
+import { emitNotificationEvent } from './notificaciones.events.js'
 
 type NotificationFilter = 'todas' | 'leida' | 'no leida' | 'archivada'
 type SupportedNotificationFilter = Exclude<NotificationFilter, 'archivada'>
@@ -165,6 +166,8 @@ export const createNotificationService = async ({
     mensaje: normalizedMessage
   })
 
+  emitNotificationEvent(user.id, 'created', notification.id)
+
   try {
     if (user.correo) {
       await sendNotificationEmail({
@@ -202,6 +205,8 @@ export const markNotificationAsReadService = async (id: number, usuarioId: numbe
       usuarioId,
       fechaLectura: new Date()
     })
+
+    emitNotificationEvent(usuarioId, 'read', id)
   }
 
   return {
@@ -220,6 +225,10 @@ export const markAllNotificationsAsReadService = async (usuarioId: number) => {
     usuarioId,
     fechaLectura: new Date()
   })
+
+  if (result.count > 0) {
+    emitNotificationEvent(usuarioId, 'read-all')
+  }
 
   return {
     message: 'Notificaciones marcadas como leídas',
@@ -243,6 +252,8 @@ export const deleteNotificationService = async (id: number, usuarioId: number) =
     id,
     usuarioId
   })
+
+  emitNotificationEvent(usuarioId, 'deleted', id)
 
   return {
     message: 'Notificación eliminada correctamente'

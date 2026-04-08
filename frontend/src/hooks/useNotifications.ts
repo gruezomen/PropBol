@@ -30,9 +30,11 @@ const buildNotificationsUrl = (filter: NotificationFilter, limit: number, offset
     limit: String(limit),
     offset: String(offset)
   })
+
   if (filter !== 'todas') {
     params.set('filter', filter)
   }
+
   return `${API_URL}/notificaciones?${params.toString()}`
 }
 
@@ -72,6 +74,7 @@ const requestJson = async <T>(url: string, init?: RequestInit): Promise<T> => {
       timeoutError.status = 408
       throw timeoutError
     }
+
     throw error
   } finally {
     window.clearTimeout(timeout)
@@ -97,8 +100,14 @@ export function useNotifications() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const savedScrollTopRef = useRef(0)
   const instanceId = useRef(`notifications-${Math.random().toString(36).slice(2)}`)
+  const eventSourceRef = useRef<EventSource | null>(null)
 
   const clearNotificationsState = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+
     setNotifications([])
     setTotal(0)
     setUnreadCount(0)
@@ -113,6 +122,7 @@ export function useNotifications() {
 
   const emitNotificationsUpdated = useCallback(() => {
     if (typeof window === 'undefined') return
+
     window.dispatchEvent(
       new CustomEvent(NOTIFICATIONS_UPDATED_EVENT, {
         detail: { source: instanceId.current }
@@ -205,11 +215,14 @@ export function useNotifications() {
       setTotal(response.total)
     } catch (err) {
       const error = err as Error & { status?: number }
+
       if (error.status === 401) {
         clearNotificationsState()
         return
       }
+
       if (!window.navigator.onLine) return
+
       setError('No se pudieron cargar las notificaciones.')
     } finally {
       setIsLoadingMore(false)
@@ -255,6 +268,11 @@ export function useNotifications() {
     const handleOffline = () => {
       setIsOnline(false)
       setError(null)
+
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
     }
 
     window.addEventListener('online', handleOnline)
@@ -278,6 +296,7 @@ export function useNotifications() {
     }
 
     window.addEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdated)
+
     return () => {
       window.removeEventListener(NOTIFICATIONS_UPDATED_EVENT, handleNotificationsUpdated)
     }
@@ -289,6 +308,7 @@ export function useNotifications() {
         clearNotificationsState()
         return
       }
+
       void refreshNotifications(filter)
     }
 
@@ -319,6 +339,7 @@ export function useNotifications() {
     }
 
     document.addEventListener('mousedown', handleClickOutside)
+
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
@@ -350,19 +371,54 @@ export function useNotifications() {
     }
   }, [filter])
 
+  useEffect(() => {
+    const token = getStoredToken()
+
+    if (!token || !isLoggedIn || !isOnline) {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close()
+        eventSourceRef.current = null
+      }
+      return
+    }
+
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
+    }
+
+    const streamUrl = `${API_URL}/notificaciones/stream?token=${encodeURIComponent(token)}`
+    const eventSource = new EventSource(streamUrl)
+
+    eventSourceRef.current = eventSource
+
+    eventSource.addEventListener('notifications-updated', () => {
+      void refreshNotifications(filter)
+    })
+
+    eventSource.addEventListener('ping', () => {})
+
+    eventSource.onerror = () => {
+      eventSource.close()
+      eventSourceRef.current = null
+
+      window.setTimeout(() => {
+        const latestToken = getStoredToken()
+        if (!latestToken || !window.navigator.onLine) return
+        void refreshNotifications(filter)
+      }, 2000)
+    }
+
+    return () => {
+      eventSource.close()
+      if (eventSourceRef.current === eventSource) {
+        eventSourceRef.current = null
+      }
+    }
+  }, [filter, isLoggedIn, isOnline, refreshNotifications])
+
   const filteredNotifications = useMemo(() => notifications, [notifications])
   const visibleNotifications = useMemo(() => notifications, [notifications])
-
-  useEffect(() => {
-    if (!isLoggedIn || !isOnline) return
-
-    const interval = setInterval(() => {
-      if (!window.navigator.onLine) return
-      void refreshNotifications(filter)
-    }, 15000)
-
-    return () => clearInterval(interval)
-  }, [isLoggedIn, isOnline, filter, refreshNotifications])
 
   return {
     open,
