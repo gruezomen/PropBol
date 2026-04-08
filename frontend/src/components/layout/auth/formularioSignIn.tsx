@@ -184,7 +184,7 @@ export default function LoginForm() {
       }
     }
 
-    function handleMessage(event: MessageEvent<GooglePopupMessage>) {
+    async function handleMessage(event: MessageEvent<GooglePopupMessage>) {
       if (event.origin !== expectedOrigin) {
         return
       }
@@ -197,16 +197,39 @@ export default function LoginForm() {
       cleanup(false)
 
       if (event.data.type === 'propbol:google-login-success') {
-        saveSession(event.data.token, event.data.user)
-        setSuccessMessage(event.data.message || 'Inicio de sesión con Google exitoso')
-        setIsLoadingGoogle(false)
-        popup.close()
+        try {
+          const verifyResponse = await fetch(`${API_URL}/api/auth/me`, {
+            method: 'GET',
+            headers: {
+              authorization: `Bearer ${event.data.token}`
+            }
+          })
 
-        window.setTimeout(() => {
-          router.push('/')
-        }, 1000)
+          if (!verifyResponse.ok) {
+            setGoogleError('No se pudo validar la sesión con el servidor. Intenta nuevamente.')
+            setIsLoadingGoogle(false)
+            popup.close()
+            return
+          }
 
-        return
+          saveSession(event.data.token, event.data.user)
+          localStorage.setItem('propbol_session_verified', 'true')
+
+          setSuccessMessage(event.data.message || 'Inicio de sesión con Google exitoso')
+          setIsLoadingGoogle(false)
+          popup.close()
+
+          window.setTimeout(() => {
+            router.push('/')
+          }, 1000)
+
+          return
+        } catch {
+          setGoogleError('No se pudo validar la sesión porque no hay conexión a internet.')
+          setIsLoadingGoogle(false)
+          popup.close()
+          return
+        }
       }
 
       setGoogleError(event.data.message || 'No se pudo iniciar sesión con Google.')
