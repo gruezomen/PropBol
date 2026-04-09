@@ -9,7 +9,7 @@ const globalForDb = globalThis as unknown as {
 
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
-  max: 2,
+  max: 1,
   idleTimeoutMillis: 10000,
   connectionTimeoutMillis: 10000,
 });
