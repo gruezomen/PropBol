@@ -1,10 +1,11 @@
 import dns from 'node:dns'
 import nodemailer from 'nodemailer'
+import SMTPTransport from 'nodemailer/lib/smtp-transport'
 import { env } from '../config/env.js'
 
 dns.setDefaultResultOrder('ipv4first')
 
-const transporter = nodemailer.createTransport({
+const transporterOptions: SMTPTransport.Options = {
   host: 'smtp.gmail.com',
   port: 587,
   secure: false,
@@ -15,9 +16,10 @@ const transporter = nodemailer.createTransport({
   },
   connectionTimeout: 30000,
   greetingTimeout: 30000,
-  socketTimeout: 60000,
-  family: 4
-})
+  socketTimeout: 60000
+}
+
+const transporter = nodemailer.createTransport(transporterOptions)
 
 export const verifyEmailTransport = async () => {
   try {
