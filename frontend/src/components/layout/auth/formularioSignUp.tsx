@@ -59,6 +59,8 @@ const initialFormData: FormData = {
   confirmPassword: "",
 }
 
+const GOOGLE_SIGNUP_PREFILL_KEY = "propbol_google_signup_prefill"
+
 function buildGoogleMissingFieldsMessage(missingFields: GoogleSignupMissingField[]) {
   if (missingFields.length === 0) {
     return ""
@@ -279,7 +281,7 @@ export default function SignUpForm() {
     }
   }
 
-  const handleCancel = () => {
+  const resetRegisterForm = useCallback(() => {
     setFormData(initialFormData)
     setErrors({})
     setTouched({})
@@ -287,8 +289,17 @@ export default function SignUpForm() {
     setShowConfirmPassword(false)
     setServerError("")
     setIsSubmitting(false)
+
+    sessionStorage.removeItem(GOOGLE_SIGNUP_PREFILL_KEY)
+  }, [])
+
+  const handleCancelRegister = useCallback(() => {
+    resetRegisterForm()
+  }, [resetRegisterForm])
+
+  const handleGoToHomePage = useCallback(() => {
     router.push("/")
-  }
+  }, [router])
 
   const isFormValid = useMemo(() => {
     const requiredFieldsCompleted =
@@ -650,10 +661,18 @@ export default function SignUpForm() {
 
             <button
               type="button"
-              onClick={handleCancel}
+              onClick={handleCancelRegister}
               className="mx-auto block rounded-md bg-[#292524] px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-[#1c1917]"
             >
               Cancelar registro
+            </button>
+
+            <button
+              type="button"
+              onClick={handleGoToHomePage}
+              className="mx-auto block text-center text-[12px] text-[#57534e] underline transition hover:text-[#292524]"
+            >
+              Ir a la página principal
             </button>
 
             <p className="pt-1 text-center text-[12px] text-[#78716c]">

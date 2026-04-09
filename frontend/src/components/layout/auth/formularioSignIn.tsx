@@ -1,8 +1,8 @@
-"use client"
+'use client'
 
-import { useRef, useState } from "react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRef, useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type LoginResponse = {
   message?: string
@@ -28,7 +28,7 @@ type MeResponse = {
 }
 
 type GooglePopupSuccessMessage = {
-  type: "propbol:google-login-success"
+  type: 'propbol:google-login-success'
   message: string
   token: string
   user: {
@@ -40,36 +40,36 @@ type GooglePopupSuccessMessage = {
 }
 
 type GooglePopupErrorMessage = {
-  type: "propbol:google-login-error"
-  code: "GOOGLE_AUTH_FAILED" | "ACCOUNT_NOT_REGISTERED" | string
+  type: 'propbol:google-login-error'
+  code: 'GOOGLE_AUTH_FAILED' | 'ACCOUNT_NOT_REGISTERED' | string
   message: string
 }
 
 type GooglePopupMessage = GooglePopupSuccessMessage | GooglePopupErrorMessage
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 const LOGIN_TIMEOUT_MS = 10000
 const GOOGLE_LOGIN_TIMEOUT_MS = 2 * 60 * 1000
 
-const DEFAULT_POST_LOGIN_REDIRECT = "/"
-const REDIRECT_AFTER_LOGIN_KEY = "redirectAfterLogin"
+const DEFAULT_POST_LOGIN_REDIRECT = '/'
+const REDIRECT_AFTER_LOGIN_KEY = 'redirectAfterLogin'
 const SESSION_DURATION_MS = 3 * 60 * 1000
 
-const NO_CONNECTION_MESSAGE = "Sin conexión a internet. Verifica tu red e intenta nuevamente."
-const SERVER_CONNECTION_MESSAGE = "No se pudo conectar con el servidor. Intenta nuevamente."
-const LOGIN_TIMEOUT_MESSAGE = "La solicitud tardó demasiado. Por favor intenta nuevamente."
+const NO_CONNECTION_MESSAGE = 'Sin conexión a internet. Verifica tu red e intenta nuevamente.'
+const SERVER_CONNECTION_MESSAGE = 'No se pudo conectar con el servidor. Intenta nuevamente.'
+const LOGIN_TIMEOUT_MESSAGE = 'La solicitud tardó demasiado. Por favor intenta nuevamente.'
 const GOOGLE_TIMEOUT_MESSAGE =
-  "La autenticación con Google tardó demasiado. Por favor intenta nuevamente."
+  'La autenticación con Google tardó demasiado. Por favor intenta nuevamente.'
 
 const clearClientSession = () => {
-  localStorage.removeItem("token")
-  localStorage.removeItem("propbol_user")
-  localStorage.removeItem("propbol_session_expires")
-  localStorage.removeItem("nombre")
-  localStorage.removeItem("correo")
-  localStorage.removeItem("avatar")
-  window.dispatchEvent(new Event("propbol:session-changed"))
-  window.dispatchEvent(new Event("auth-state-changed"))
+  localStorage.removeItem('token')
+  localStorage.removeItem('propbol_user')
+  localStorage.removeItem('propbol_session_expires')
+  localStorage.removeItem('nombre')
+  localStorage.removeItem('correo')
+  localStorage.removeItem('avatar')
+  window.dispatchEvent(new Event('propbol:session-changed'))
+  window.dispatchEvent(new Event('auth-state-changed'))
 }
 
 const saveSession = (
@@ -82,35 +82,35 @@ const saveSession = (
     avatar?: string | null
   }
 ) => {
-  localStorage.setItem("token", token)
+  localStorage.setItem('token', token)
 
   const userName =
     user?.nombre && user?.apellido
       ? `${user.nombre} ${user.apellido}`
-      : user?.nombre || user?.correo || "Usuario"
+      : user?.nombre || user?.correo || 'Usuario'
 
   localStorage.setItem(
-    "propbol_user",
+    'propbol_user',
     JSON.stringify({
       name: userName,
-      email: user?.correo ?? "",
-      avatar: user?.avatar ?? null,
+      email: user?.correo ?? '',
+      avatar: user?.avatar ?? null
     })
   )
 
-  localStorage.setItem("nombre", userName)
-  localStorage.setItem("correo", user?.correo ?? "")
-  localStorage.setItem("avatar", user?.avatar ?? "")
-  localStorage.setItem("propbol_session_expires", String(Date.now() + SESSION_DURATION_MS))
+  localStorage.setItem('nombre', userName)
+  localStorage.setItem('correo', user?.correo ?? '')
+  localStorage.setItem('avatar', user?.avatar ?? '')
+  localStorage.setItem('propbol_session_expires', String(Date.now() + SESSION_DURATION_MS))
 
-  window.dispatchEvent(new Event("propbol:login"))
-  window.dispatchEvent(new Event("propbol:session-changed"))
-  window.dispatchEvent(new Event("auth-state-changed"))
+  window.dispatchEvent(new Event('propbol:login'))
+  window.dispatchEvent(new Event('propbol:session-changed'))
+  window.dispatchEvent(new Event('auth-state-changed'))
 }
 
 const getRedirectAfterLogin = () => {
   const redirect = localStorage.getItem(REDIRECT_AFTER_LOGIN_KEY)
-  if (!redirect || !redirect.startsWith("/")) {
+  if (!redirect || !redirect.startsWith('/')) {
     return DEFAULT_POST_LOGIN_REDIRECT
   }
   return redirect
@@ -121,41 +121,51 @@ const clearRedirectAfterLogin = () => {
 }
 
 const isGooglePopupMessage = (value: unknown): value is GooglePopupMessage => {
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return false
   }
-  return "type" in value
+  return 'type' in value
 }
 
 const hasNoInternetConnection = () => {
-  if (typeof navigator === "undefined") {
+  if (typeof navigator === 'undefined') {
     return false
   }
   return !navigator.onLine
 }
 
-const getRequestErrorMessage = (error: unknown) => {
-  if (error instanceof Error && error.name === "AbortError") {
-    return LOGIN_TIMEOUT_MESSAGE
+const getRequestErrorMessage = (error: unknown, timeoutMessage = LOGIN_TIMEOUT_MESSAGE) => {
+  if (error instanceof DOMException && error.name === 'AbortError') {
+    return timeoutMessage
   }
+
   if (hasNoInternetConnection()) {
     return NO_CONNECTION_MESSAGE
   }
+
+  if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+    return SERVER_CONNECTION_MESSAGE
+  }
+
+  if (error instanceof Error && error.message.trim()) {
+    return error.message
+  }
+
   return SERVER_CONNECTION_MESSAGE
 }
 
-const fetchCurrentUser = async (token: string): Promise<NonNullable<MeResponse["user"]>> => {
+const fetchCurrentUser = async (token: string): Promise<NonNullable<MeResponse['user']>> => {
   const response = await fetch(`${API_URL}/api/auth/me`, {
-    method: "GET",
+    method: 'GET',
     headers: {
-      Authorization: `Bearer ${token}`,
-    },
+      Authorization: `Bearer ${token}`
+    }
   })
 
   const data = (await response.json()) as MeResponse
 
   if (!response.ok || !data.user) {
-    throw new Error(data.message || "No se pudo validar la sesión")
+    throw new Error(data.message || 'No se pudo validar la sesión')
   }
 
   return data.user
@@ -165,13 +175,13 @@ export default function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
   const [isLoadingGoogle, setIsLoadingGoogle] = useState(false)
-  const [correo, setCorreo] = useState("")
-  const [password, setPassword] = useState("")
+  const [correo, setCorreo] = useState('')
+  const [password, setPassword] = useState('')
   const [errors, setErrors] = useState<{ correo?: string; password?: string }>({})
-  const [errorMessage, setErrorMessage] = useState("")
-  const [successMessage, setSuccessMessage] = useState("")
+  const [errorMessage, setErrorMessage] = useState('')
+  const [successMessage, setSuccessMessage] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [googleError, setGoogleError] = useState("")
+  const [googleError, setGoogleError] = useState('')
   const passwordContainerRef = useRef<HTMLDivElement>(null)
 
   const redirectAfterSuccessfulLogin = () => {
@@ -180,27 +190,26 @@ export default function LoginForm() {
     router.push(redirect)
   }
 
-  const isFormValid =
-    correo.length > 0 && password.length > 0 && !errors.correo && !errors.password
+  const isFormValid = correo.length > 0 && password.length > 0 && !errors.correo && !errors.password
 
   const validate = (field: string, value: string) => {
     const newErrors = { ...errors }
 
-    if (field === "correo") {
+    if (field === 'correo') {
       if (!value) {
-        newErrors.correo = "El correo es obligatorio"
+        newErrors.correo = 'El correo es obligatorio'
       } else if (!/\S+@\S+\.\S+/.test(value)) {
-        newErrors.correo = "Formato de correo inválido"
+        newErrors.correo = 'Formato de correo inválido'
       } else {
         delete newErrors.correo
       }
     }
 
-    if (field === "password") {
+    if (field === 'password') {
       if (!value) {
-        newErrors.password = "La contraseña es obligatoria"
+        newErrors.password = 'La contraseña es obligatoria'
       } else if (value.length > 16) {
-        newErrors.password = "La contraseña no puede tener más de 16 caracteres"
+        newErrors.password = 'La contraseña no puede tener más de 16 caracteres'
       } else {
         delete newErrors.password
       }
@@ -209,14 +218,11 @@ export default function LoginForm() {
     setErrors(newErrors)
   }
 
-  const finalizeValidatedSession = async (
-    token: string,
-    fallbackUser?: LoginResponse["user"]
-  ) => {
+  const finalizeValidatedSession = async (token: string, fallbackUser?: LoginResponse['user']) => {
     const validatedUser = await fetchCurrentUser(token)
 
     if (!validatedUser) {
-      throw new Error("No se pudo obtener el usuario autenticado.")
+      throw new Error('No se pudo obtener el usuario autenticado.')
     }
 
     saveSession(token, {
@@ -224,15 +230,15 @@ export default function LoginForm() {
       correo: validatedUser.correo,
       nombre: validatedUser.nombre ?? fallbackUser?.nombre,
       apellido: validatedUser.apellido ?? fallbackUser?.apellido,
-      avatar: validatedUser.avatar ?? fallbackUser?.avatar ?? null,
+      avatar: validatedUser.avatar ?? fallbackUser?.avatar ?? null
     })
   }
 
   const handleGoogleLogin = () => {
     clearClientSession()
-    setGoogleError("")
-    setErrorMessage("")
-    setSuccessMessage("")
+    setGoogleError('')
+    setErrorMessage('')
+    setSuccessMessage('')
 
     if (hasNoInternetConnection()) {
       setGoogleError(NO_CONNECTION_MESSAGE)
@@ -248,13 +254,13 @@ export default function LoginForm() {
 
     const popupWindow = window.open(
       `${API_URL}/api/auth/google/login`,
-      "google-login",
+      'google-login',
       `width=${popupWidth},height=${popupHeight},left=${left},top=${top}`
     )
 
-    if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === "undefined") {
+    if (!popupWindow || popupWindow.closed || typeof popupWindow.closed === 'undefined') {
       setGoogleError(
-        "El navegador bloqueó la ventana emergente. Habilita los pop-ups para continuar."
+        'El navegador bloqueó la ventana emergente. Habilita los pop-ups para continuar.'
       )
       setIsLoadingGoogle(false)
       return
@@ -269,7 +275,7 @@ export default function LoginForm() {
     let googleTimeoutId = 0
 
     function cleanup(shouldStopLoading = true) {
-      window.removeEventListener("message", handleMessage)
+      window.removeEventListener('message', handleMessage)
       window.clearInterval(checkPopupIntervalId)
       window.clearTimeout(googleTimeoutId)
 
@@ -290,11 +296,11 @@ export default function LoginForm() {
       authWasResolved = true
       cleanup(false)
 
-      if (event.data.type === "propbol:google-login-success") {
+      if (event.data.type === 'propbol:google-login-success') {
         try {
           await finalizeValidatedSession(event.data.token, event.data.user)
-          setSuccessMessage(event.data.message || "Inicio de sesión con Google exitoso")
-          setGoogleError("")
+          setSuccessMessage(event.data.message || 'Inicio de sesión con Google exitoso')
+          setGoogleError('')
           setIsLoadingGoogle(false)
           popup.close()
 
@@ -303,11 +309,7 @@ export default function LoginForm() {
           }, 1000)
         } catch (error) {
           clearClientSession()
-          setGoogleError(
-            error instanceof Error
-              ? error.message
-              : "No se pudo consolidar la sesión con Google."
-          )
+          setGoogleError(getRequestErrorMessage(error, GOOGLE_TIMEOUT_MESSAGE))
           setIsLoadingGoogle(false)
           popup.close()
         }
@@ -315,7 +317,7 @@ export default function LoginForm() {
       }
 
       clearClientSession()
-      setGoogleError(event.data.message || "No se pudo iniciar sesión con Google.")
+      setGoogleError(event.data.message || 'No se pudo iniciar sesión con Google.')
       setIsLoadingGoogle(false)
       popup.close()
     }
@@ -335,9 +337,7 @@ export default function LoginForm() {
           return
         }
 
-        setGoogleError(
-          "Cancelaste el inicio de sesión con Google. Puedes intentarlo nuevamente."
-        )
+        setGoogleError('Cancelaste el inicio de sesión con Google. Puedes intentarlo nuevamente.')
       }
     }, 500)
 
@@ -352,7 +352,7 @@ export default function LoginForm() {
       setGoogleError(hasNoInternetConnection() ? NO_CONNECTION_MESSAGE : GOOGLE_TIMEOUT_MESSAGE)
     }, GOOGLE_LOGIN_TIMEOUT_MS)
 
-    window.addEventListener("message", handleMessage)
+    window.addEventListener('message', handleMessage)
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -364,26 +364,26 @@ export default function LoginForm() {
     const newErrors: { correo?: string; password?: string } = {}
 
     if (!trimmedCorreo) {
-      newErrors.correo = "El correo es obligatorio"
+      newErrors.correo = 'El correo es obligatorio'
     } else if (!/\S+@\S+\.\S+/.test(trimmedCorreo)) {
-      newErrors.correo = "Formato de correo inválido"
+      newErrors.correo = 'Formato de correo inválido'
     }
 
     if (!trimmedPassword) {
-      newErrors.password = "La contraseña es obligatoria"
+      newErrors.password = 'La contraseña es obligatoria'
     }
 
     setErrors(newErrors)
-    setErrorMessage("")
-    setSuccessMessage("")
-    setGoogleError("")
+    setErrorMessage('')
+    setSuccessMessage('')
+    setGoogleError('')
 
     if (Object.keys(newErrors).length > 0) {
       return
     }
 
     if (hasNoInternetConnection()) {
-      setPassword("")
+      setPassword('')
       setErrorMessage(NO_CONNECTION_MESSAGE)
       return
     }
@@ -398,46 +398,46 @@ export default function LoginForm() {
 
     try {
       const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           correo: trimmedCorreo,
-          password: trimmedPassword,
+          password: trimmedPassword
         }),
-        signal: controller.signal,
+        signal: controller.signal
       })
 
       const data: LoginResponse = await response.json()
 
       if (!response.ok) {
-        setPassword("")
+        setPassword('')
 
         if (response.status === 404) {
           setErrorMessage(
-            "Esta cuenta no está registrada. Puedes registrarte para crear una cuenta."
+            'Esta cuenta no está registrada. Puedes registrarte para crear una cuenta.'
           )
           return
         }
 
-        setErrorMessage(data.message || "Error al iniciar sesión")
+        setErrorMessage(data.message || 'Error al iniciar sesión')
         return
       }
 
       if (!data.token) {
         clearClientSession()
-        setErrorMessage("El servidor no devolvió un token válido")
+        setErrorMessage('El servidor no devolvió un token válido')
         return
       }
 
       await finalizeValidatedSession(data.token, data.user)
-      setSuccessMessage(data.message || "Inicio de sesión exitoso")
+      setSuccessMessage(data.message || 'Inicio de sesión exitoso')
 
       window.setTimeout(() => {
         redirectAfterSuccessfulLogin()
       }, 1000)
     } catch (error) {
       clearClientSession()
-      setPassword("")
+      setPassword('')
       setErrorMessage(getRequestErrorMessage(error))
     } finally {
       window.clearTimeout(timeoutId)
@@ -451,9 +451,7 @@ export default function LoginForm() {
 
       <form className="space-y-4" onSubmit={handleSubmit}>
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
-            Correo electrónico
-          </label>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Correo electrónico</label>
 
           <input
             type="email"
@@ -463,7 +461,7 @@ export default function LoginForm() {
             value={correo}
             onChange={(e) => {
               setCorreo(e.target.value)
-              validate("correo", e.target.value)
+              validate('correo', e.target.value)
             }}
             className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm outline-none focus:border-orange-500"
           />
@@ -485,14 +483,14 @@ export default function LoginForm() {
             }}
           >
             <input
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               required
               placeholder="Ingresa tu contraseña"
               value={password}
               maxLength={16}
               onChange={(e) => {
                 setPassword(e.target.value)
-                validate("password", e.target.value)
+                validate('password', e.target.value)
               }}
               className="w-full rounded-md border border-gray-300 px-3 py-2 pr-10 text-sm outline-none focus:border-orange-500"
             />
@@ -502,7 +500,7 @@ export default function LoginForm() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
             >
-              {showPassword ? "Ocultar" : "Ver"}
+              {showPassword ? 'Ocultar' : 'Ver'}
             </button>
           </div>
 
@@ -526,11 +524,11 @@ export default function LoginForm() {
           disabled={!isFormValid || isLoading}
           className={`w-full rounded-md py-2 text-sm font-semibold text-white ${
             !isFormValid || isLoading
-              ? "cursor-not-allowed bg-orange-300"
-              : "bg-orange-500 hover:bg-orange-600"
+              ? 'cursor-not-allowed bg-orange-300'
+              : 'bg-orange-500 hover:bg-orange-600'
           }`}
         >
-          {isLoading ? "Ingresando..." : "Iniciar sesión"}
+          {isLoading ? 'Ingresando...' : 'Iniciar sesión'}
         </button>
 
         <button
@@ -540,7 +538,7 @@ export default function LoginForm() {
           className="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
         >
           <span className="text-base font-bold">G</span>
-          {isLoadingGoogle ? "Autenticando..." : "Continuar con Google"}
+          {isLoadingGoogle ? 'Autenticando...' : 'Continuar con Google'}
         </button>
 
         {googleError && (
@@ -551,7 +549,7 @@ export default function LoginForm() {
 
         <button
           type="button"
-          onClick={() => router.push("/")}
+          onClick={() => router.push('/')}
           className="mx-auto block w-fit rounded-md bg-gray-700 px-4 py-1.5 text-xs font-medium text-white hover:bg-gray-800"
         >
           Cancelar Inicio de sesión
@@ -559,7 +557,7 @@ export default function LoginForm() {
       </form>
 
       <p className="mt-4 text-center text-sm text-gray-600">
-        ¿No tienes una cuenta?{" "}
+        ¿No tienes una cuenta?{' '}
         <Link href="/sign-up" className="font-semibold text-orange-500 hover:underline">
           Regístrate
         </Link>
