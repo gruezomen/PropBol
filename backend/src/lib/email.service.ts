@@ -6,15 +6,15 @@ dns.setDefaultResultOrder('ipv4first')
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587,
-  secure: false,
+  port: 465,
+  secure: true,
   auth: {
     user: env.EMAIL_USER,
     pass: env.EMAIL_PASSWORD
   },
-  connectionTimeout: 10000,
-  greetingTimeout: 10000,
-  socketTimeout: 15000
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 60000
 })
 
 export const verifyEmailTransport = async () => {
