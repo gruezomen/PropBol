@@ -344,11 +344,36 @@ export default function SignUpForm() {
       isNewUser: boolean
       message: string
     }) => {
+      const userName =
+        user?.nombre && user?.apellido
+          ? `${user.nombre} ${user.apellido}`
+          : user?.nombre || user?.correo || 'Usuario'
+
       localStorage.setItem('token', token)
-      localStorage.setItem('user', JSON.stringify(user))
+
+      localStorage.setItem(
+        'propbol_user',
+        JSON.stringify({
+          name: userName,
+          email: user?.correo ?? '',
+          avatar: null
+        })
+      )
+
+      localStorage.setItem('nombre', userName)
+      localStorage.setItem('correo', user?.correo ?? '')
+      localStorage.setItem('avatar', '')
+      localStorage.setItem(
+        'propbol_session_expires',
+        String(Date.now() + 3 * 60 * 1000)
+      )
+
+      window.dispatchEvent(new Event('propbol:login'))
+      window.dispatchEvent(new Event('propbol:session-changed'))
+      window.dispatchEvent(new Event('auth-state-changed'))
 
       sessionStorage.setItem(
-        'auth_success_message',
+        'register_success_message',
         isNewUser
           ? 'Tu cuenta fue creada con Google correctamente.'
           : 'Inicio de sesión con Google exitoso.'
