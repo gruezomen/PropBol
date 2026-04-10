@@ -1,6 +1,4 @@
 import crypto from 'node:crypto'
-import { env } from '../../../config/env.js'
-import { generateToken, type JwtPayload } from '../../../utils/jwt.js'
 import {
   createGoogleSession,
   createGoogleUser,
@@ -13,6 +11,8 @@ import {
   type GoogleTokenResponse,
   type GoogleUserInfo
 } from './google.types.js'
+import { generateToken, type JwtPayload } from '../../../utils/jwt.js'
+import { env } from '../../../config/env.js'
 
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token'
 const GOOGLE_USERINFO_URL = 'https://openidconnect.googleapis.com/v1/userinfo'
@@ -95,7 +95,6 @@ const resolveGoogleNames = (googleUser: GoogleUserInfo) => {
   const fallback = splitFullName(googleUser.name)
 
   const nombre = googleUser.given_name?.trim() || fallback.firstName || 'Usuario'
-
   const apellido = googleUser.family_name?.trim() || fallback.lastName || 'Google'
 
   return {
@@ -108,12 +107,14 @@ const buildSessionResponse = async ({
   id,
   correo,
   nombre,
-  apellido
+  apellido,
+  isNewUser
 }: {
   id: number
   correo: string
   nombre: string
   apellido: string
+  isNewUser: boolean
 }): Promise<GoogleAuthSuccess> => {
   const jwtPayload: JwtPayload = {
     id,
@@ -130,8 +131,11 @@ const buildSessionResponse = async ({
   })
 
   return {
-    message: 'Autenticación con Google exitosa',
+    message: isNewUser
+      ? 'Registro con Google completado correctamente.'
+      : 'Inicio de sesión con Google exitoso.',
     token,
+    isNewUser,
     user: {
       id,
       correo,
@@ -169,7 +173,8 @@ export const authenticateWithGoogleCodeService = async (
       id: existingUser.id,
       correo: existingUser.correo,
       nombre: existingUser.nombre,
-      apellido: existingUser.apellido
+      apellido: existingUser.apellido,
+      isNewUser: false
     })
   }
 
@@ -195,6 +200,7 @@ export const authenticateWithGoogleCodeService = async (
     id: newUser.id,
     correo: newUser.correo,
     nombre: newUser.nombre,
-    apellido: newUser.apellido
+    apellido: newUser.apellido,
+    isNewUser: true
   })
 }

@@ -19,7 +19,7 @@ type GoogleRegisterButtonProps = {
 }
 
 type GooglePopupSuccessPayload = {
-  type: 'propbol:google-login-success'
+  type: 'propbol:google-auth-success'
   message: string
   token: string
   isNewUser: boolean
@@ -32,7 +32,7 @@ type GooglePopupSuccessPayload = {
 }
 
 type GooglePopupErrorPayload = {
-  type: 'propbol:google-login-error'
+  type: 'propbol:google-auth-error'
   code: string
   message: string
 }
@@ -88,7 +88,7 @@ export default function GoogleRegisterButton({
     const top = height / 2 - POPUP_HEIGHT / 2 + dualScreenTop
 
     const popup = window.open(
-      `${API_URL}/api/auth/google/login`,
+      `${API_URL}/api/auth/google/register`,
       'google-register-popup',
       `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},top=${top},left=${left},scrollbars=yes,resizable=yes`
     )
@@ -117,9 +117,7 @@ export default function GoogleRegisterButton({
     const expectedOrigin = new URL(API_URL).origin
 
     const handleMessage = (event: MessageEvent<GooglePopupMessage>) => {
-      if (event.origin !== expectedOrigin) {
-        return
-      }
+      if (event.origin !== expectedOrigin) return
 
       const payload = event.data
 
@@ -127,12 +125,12 @@ export default function GoogleRegisterButton({
         return
       }
 
-      if (payload.type === 'propbol:google-login-error') {
+      if (payload.type === 'propbol:google-auth-error') {
         setErrorMessage(payload.message || 'No se pudo autenticar con Google.')
         return
       }
 
-      if (payload.type === 'propbol:google-login-success') {
+      if (payload.type === 'propbol:google-auth-success') {
         clearErrorMessage()
         onSuccess({
           token: payload.token,
@@ -148,6 +146,7 @@ export default function GoogleRegisterButton({
     return () => {
       window.removeEventListener('message', handleMessage)
       clearPopupWatcher()
+
       if (popupRef.current && !popupRef.current.closed) {
         popupRef.current.close()
       }

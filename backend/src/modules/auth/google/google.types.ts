@@ -1,5 +1,3 @@
-export type GoogleAuthIntent = 'login' | 'register'
-
 export type GoogleTokenResponse = {
   access_token?: string
   id_token?: string
@@ -19,9 +17,12 @@ export type GoogleUserInfo = {
   email_verified?: boolean
 }
 
+export type GoogleAuthIntent = 'login' | 'register'
+
 export type GoogleAuthSuccess = {
   message: string
   token: string
+  isNewUser: boolean
   user: {
     id: number
     correo: string
@@ -31,13 +32,12 @@ export type GoogleAuthSuccess = {
 }
 
 export class GoogleAuthError extends Error {
-  code: 'GOOGLE_AUTH_FAILED' | 'ACCOUNT_NOT_REGISTERED' | 'GOOGLE_PROFILE_INCOMPLETE'
-
+  code: 'GOOGLE_AUTH_FAILED' | 'ACCOUNT_NOT_REGISTERED'
   statusCode: number
 
   constructor(
     message: string,
-    code: 'GOOGLE_AUTH_FAILED' | 'ACCOUNT_NOT_REGISTERED' | 'GOOGLE_PROFILE_INCOMPLETE',
+    code: 'GOOGLE_AUTH_FAILED' | 'ACCOUNT_NOT_REGISTERED',
     statusCode = 400
   ) {
     super(message)

@@ -34,6 +34,7 @@ const sendPopupResponse = (
         type: 'propbol:google-auth-success'
         message: string
         token: string
+        isNewUser: boolean
         user: {
           id: number
           correo: string
@@ -49,10 +50,7 @@ const sendPopupResponse = (
 ) => {
   const serializedPayload = JSON.stringify(payload).replace(/</g, '\\u003c')
   const targetOrigin = JSON.stringify(env.FRONTEND_URL)
-  const fallbackMessage =
-    payload.type === 'propbol:google-auth-success'
-      ? 'Autenticación completada. Puedes cerrar esta ventana.'
-      : payload.message
+  const fallbackMessage = payload.message
 
   return res.status(200).type('html').send(`<!DOCTYPE html>
 <html lang="es">
@@ -112,11 +110,9 @@ export const googleCallbackController = async (req: Request, res: Response) => {
 
     return sendPopupResponse(res, {
       type: 'propbol:google-auth-success',
-      message:
-        intent === 'register'
-          ? 'Registro con Google completado correctamente.'
-          : 'Inicio de sesión con Google exitoso.',
+      message: result.message,
       token: result.token,
+      isNewUser: result.isNewUser,
       user: result.user
     })
   } catch (error) {
