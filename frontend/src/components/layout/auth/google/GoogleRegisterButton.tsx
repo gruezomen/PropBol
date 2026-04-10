@@ -1,250 +1,173 @@
 'use client'
 
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-
-declare global {
-  interface Window {
-    google?: GoogleNamespace
-  }
-}
-
-interface GoogleCredentialResponse {
-  credential: string
-  select_by: string
-}
-
-interface GoogleMomentNotification {
-  isDismissedMoment: () => boolean;
-  getDismissedReason: () => string;
-  isNotDisplayed: () => boolean;
-  getNotDisplayedReason: () => string;
-  isSkippedMoment: () => boolean;
-  getSkippedReason: () => string;
-}
-
-interface GoogleInitializeConfig {
-  client_id: string;
-  callback: (response: GoogleCredentialResponse) => void | Promise<void>;
-  moment_callback?: (notification: GoogleMomentNotification) => void;
-  ux_mode?: "popup" | "redirect";
-  locale?: string;
-  cancel_on_tap_outside?: boolean;
-}
-
-interface GoogleRenderButtonOptions {
-  type?: 'standard' | 'icon'
-  theme?: 'outline' | 'filled_blue' | 'filled_black'
-  size?: 'large' | 'medium' | 'small'
-  shape?: 'rectangular' | 'pill' | 'circle' | 'square'
-  logo_alignment?: 'left' | 'center'
-  width?: number
-  locale?: string
-}
-
-interface GoogleAccountsId {
-  initialize: (config: GoogleInitializeConfig) => void;
-  renderButton: (
-    parent: HTMLElement,
-    options: GoogleRenderButtonOptions,
-  ) => void;
-  prompt: () => void;
-  disableAutoSelect: () => void;
-}
-
-interface GoogleNamespace {
-  accounts: {
-    id: GoogleAccountsId
-  }
-}
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 type GoogleRegisterButtonProps = {
-  onCredentialReceived: (credential: string) => void | Promise<void>;
-  onError?: (message: string) => void;
-  disabled?: boolean;
-};
+  onSuccess: (payload: {
+    token: string
+    user: {
+      id: number
+      correo: string
+      nombre: string
+      apellido: string
+    }
+    isNewUser: boolean
+    message: string
+  }) => void
+  onError?: (message: string) => void
+  disabled?: boolean
+}
 
-const SCRIPT_ID = "google-identity-services-script";
-const GOOGLE_SELECTION_TIMEOUT_MS = 15000;
+type GooglePopupSuccessPayload = {
+  type: 'propbol:google-login-success'
+  message: string
+  token: string
+  isNewUser: boolean
+  user: {
+    id: number
+    correo: string
+    nombre: string
+    apellido: string
+  }
+}
+
+type GooglePopupErrorPayload = {
+  type: 'propbol:google-login-error'
+  code: string
+  message: string
+}
+
+type GooglePopupMessage = GooglePopupSuccessPayload | GooglePopupErrorPayload
+
+const POPUP_WIDTH = 500
+const POPUP_HEIGHT = 650
 
 export default function GoogleRegisterButton({
-  onCredentialReceived,
+  onSuccess,
   onError,
-  disabled = false,
+  disabled = false
 }: GoogleRegisterButtonProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [localError, setLocalError] = useState("");
-  const router = useRouter();
+  const [localError, setLocalError] = useState('')
+  const popupRef = useRef<Window | null>(null)
+  const pollIntervalRef = useRef<number | null>(null)
 
-  const selectionTimeoutRef = useRef<number | null>(null);
-  const hasTimedOutRef = useRef(false);
-  const isWaitingForCredentialRef = useRef(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
-  const setErrorMessage = (message: string) => {
-    setLocalError(message);
-    onError?.(message);
-  };
+  const setErrorMessage = useCallback(
+    (message: string) => {
+      setLocalError(message)
+      onError?.(message)
+    },
+    [onError]
+  )
 
-  const clearErrorMessage = () => {
-    setLocalError("");
-    onError?.("");
-  };
+  const clearErrorMessage = useCallback(() => {
+    setLocalError('')
+    onError?.('')
+  }, [onError])
 
-  const clearSelectionTimeout = () => {
-    if (selectionTimeoutRef.current !== null) {
-      window.clearTimeout(selectionTimeoutRef.current);
-      selectionTimeoutRef.current = null;
+  const clearPopupWatcher = useCallback(() => {
+    if (pollIntervalRef.current !== null) {
+      window.clearInterval(pollIntervalRef.current)
+      pollIntervalRef.current = null
     }
-  };
+  }, [])
 
-  const resetSelectionState = () => {
-    clearSelectionTimeout();
-    hasTimedOutRef.current = false;
-    isWaitingForCredentialRef.current = false;
-  };
+  const handleOpenGooglePopup = useCallback(() => {
+    if (disabled) return
 
-  const startSelectionTimeout = () => {
-    if (disabled) return;
+    clearErrorMessage()
 
-    clearSelectionTimeout();
-    clearErrorMessage();
+    const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
+    const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY
 
-    hasTimedOutRef.current = false;
-    isWaitingForCredentialRef.current = true;
+    const width = window.innerWidth || document.documentElement.clientWidth || screen.width
+    const height = window.innerHeight || document.documentElement.clientHeight || screen.height
 
-    selectionTimeoutRef.current = window.setTimeout(() => {
-      hasTimedOutRef.current = true;
-      isWaitingForCredentialRef.current = false;
+    const left = width / 2 - POPUP_WIDTH / 2 + dualScreenLeft
+    const top = height / 2 - POPUP_HEIGHT / 2 + dualScreenTop
 
+    const popup = window.open(
+      `${API_URL}/api/auth/google/login`,
+      'google-register-popup',
+      `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},top=${top},left=${left},scrollbars=yes,resizable=yes`
+    )
+
+    if (!popup) {
       setErrorMessage(
-        "Se agotó el tiempo para seleccionar una cuenta de Google. Intenta nuevamente.",
-      );
+        'No se pudo abrir la ventana de Google. Verifica que tu navegador no esté bloqueando popups.'
+      )
+      return
+    }
 
-      router.replace("/sign-up");
-    }, GOOGLE_SELECTION_TIMEOUT_MS);
-  };
+    popupRef.current = popup
+    popup.focus()
+
+    clearPopupWatcher()
+
+    pollIntervalRef.current = window.setInterval(() => {
+      if (popupRef.current?.closed) {
+        clearPopupWatcher()
+        popupRef.current = null
+      }
+    }, 500)
+  }, [API_URL, clearErrorMessage, clearPopupWatcher, disabled, setErrorMessage])
 
   useEffect(() => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+    const expectedOrigin = new URL(API_URL).origin
 
-    if (!clientId) {
-      setErrorMessage("Falta configurar NEXT_PUBLIC_GOOGLE_CLIENT_ID");
-      return;
+    const handleMessage = (event: MessageEvent<GooglePopupMessage>) => {
+      if (event.origin !== expectedOrigin) {
+        return
+      }
+
+      const payload = event.data
+
+      if (!payload || typeof payload !== 'object' || !('type' in payload)) {
+        return
+      }
+
+      if (payload.type === 'propbol:google-login-error') {
+        setErrorMessage(payload.message || 'No se pudo autenticar con Google.')
+        return
+      }
+
+      if (payload.type === 'propbol:google-login-success') {
+        clearErrorMessage()
+        onSuccess({
+          token: payload.token,
+          user: payload.user,
+          isNewUser: payload.isNewUser,
+          message: payload.message
+        })
+      }
     }
 
-    const renderGoogleButton = () => {
-      if (!containerRef.current || !window.google) return
-
-      containerRef.current.innerHTML = ''
-
-      window.google.accounts.id.disableAutoSelect();
-
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: async (response: GoogleCredentialResponse) => {
-          clearSelectionTimeout();
-          isWaitingForCredentialRef.current = false;
-
-          if (hasTimedOutRef.current) {
-            return;
-          }
-
-          if (!response.credential) {
-            setErrorMessage("Google no devolvió una credencial válida");
-            return;
-          }
-
-          clearErrorMessage();
-          await onCredentialReceived(response.credential);
-        },
-        moment_callback: (notification: GoogleMomentNotification) => {
-          const wasDismissed =
-            notification.isDismissedMoment() &&
-            (notification.getDismissedReason() === "credential_returned" ||
-              notification.getDismissedReason() === "cancel_called" ||
-              notification.getDismissedReason() === "flow_restarted");
-
-          if (notification.isDismissedMoment() && !wasDismissed) {
-            clearSelectionTimeout();
-            isWaitingForCredentialRef.current = false;
-            router.replace("/sign-up");
-          }
-
-          if (notification.isSkippedMoment()) {
-            clearSelectionTimeout();
-            isWaitingForCredentialRef.current = false;
-          }
-
-          if (notification.isNotDisplayed()) {
-            clearSelectionTimeout();
-            isWaitingForCredentialRef.current = false;
-            setErrorMessage(
-              "No se pudo mostrar la ventana de Google. Intenta nuevamente.",
-            );
-          }
-        },
-        ux_mode: "popup",
-        locale: "es",
-        cancel_on_tap_outside: true,
-      });
-
-      window.google.accounts.id.renderButton(containerRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        shape: 'rectangular',
-        logo_alignment: 'left',
-        width: containerRef.current.offsetWidth || 300,
-        locale: 'es'
-      })
-    }
-
-    if (window.google?.accounts?.id) {
-      renderGoogleButton();
-
-      return () => {
-        clearSelectionTimeout();
-      };
-    }
-
-    const existingScript = document.getElementById(SCRIPT_ID) as HTMLScriptElement | null
-
-    if (existingScript) {
-      existingScript.addEventListener("load", renderGoogleButton);
-
-      return () => {
-        clearSelectionTimeout();
-        existingScript.removeEventListener("load", renderGoogleButton);
-      };
-    }
-
-    const script = document.createElement('script')
-    script.id = SCRIPT_ID
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.async = true
-    script.defer = true
-    script.onload = renderGoogleButton
-    script.onerror = () => {
-      setErrorMessage("No se pudo cargar Google Identity Services");
-    };
-
-    document.head.appendChild(script)
+    window.addEventListener('message', handleMessage)
 
     return () => {
-      clearSelectionTimeout();
-      script.removeEventListener("load", renderGoogleButton);
-    };
-  }, [onCredentialReceived, onError, router]);
+      window.removeEventListener('message', handleMessage)
+      clearPopupWatcher()
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.close()
+      }
+    }
+  }, [API_URL, clearErrorMessage, clearPopupWatcher, onSuccess, setErrorMessage])
 
   return (
     <div className="space-y-1">
-      <div
-        className={disabled ? "pointer-events-none opacity-60" : ""}
-        aria-disabled={disabled}
-        onClickCapture={startSelectionTimeout}
+      <button
+        type="button"
+        onClick={handleOpenGooglePopup}
+        disabled={disabled}
+        className={`w-full rounded-md border px-4 py-2.5 text-[13px] font-semibold transition ${
+          disabled
+            ? 'cursor-not-allowed border-[#d6d3d1] bg-[#f5f5f4] text-[#a8a29e]'
+            : 'border-[#d6d3d1] bg-white text-[#292524] hover:bg-[#fafaf9]'
+        }`}
       >
-        <div ref={containerRef} className="w-full" />
-      </div>
+        Continuar con Google
+      </button>
 
       {localError ? <p className="text-[11px] text-red-500">{localError}</p> : null}
     </div>

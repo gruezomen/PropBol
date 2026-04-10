@@ -29,6 +29,7 @@ import meHandler from '../api/auth/me.js'
 import correoverificacionRoutes from './modules/perfil/correoverificacion.routes.js'
 import {
   googleCallbackController,
+  StartGoogleRegisterController,
   StratGoogleLoginController
 } from './modules/auth/google/google.controller.js'
 import multimediaRoutes from './modules/multimedia/multimedia.routes.js'
@@ -64,7 +65,7 @@ app.post('/api/auth/register', registerController)
 app.post('/api/auth/login', loginController)
 app.post('/api/auth/logout', logoutController)
 app.post('/api/auth/verify-register', verifyRegisterCodeController)
-app.get('/api/auth/google/login', StratGoogleLoginController)
+app.get('/api/auth/google/register', StartGoogleRegisterController)
 app.get('/api/auth/google/callback', googleCallbackController)
 
 const bannersController = new BannersController()

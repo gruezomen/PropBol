@@ -1,25 +1,11 @@
-"use client"
+'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  Eye,
-  EyeOff,
-  Mail,
-  User,
-  Phone,
-  Lock,
-  AlertCircle,
-} from "lucide-react"
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { validateEmail, validatePassword } from "@/lib/validators/auth"
-import GoogleRegisterButton from "@/components/layout/auth/google/GoogleRegisterButton"
-import {
-  consumeGoogleSignupPrefill,
-  extractGooglePrefillValidationFromCredential,
-  getMissingGoogleSignupFields,
-  type GoogleSignupMissingField,
-} from "@/lib/auth/google"
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Eye, EyeOff, Mail, User, Phone, Lock, AlertCircle } from 'lucide-react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { validateEmail, validatePassword } from '@/lib/validators/auth'
+import GoogleRegisterButton from '@/components/layout/auth/google/GoogleRegisterButton'
 
 type FormData = {
   email: string
@@ -51,57 +37,23 @@ const MAX_NAME_LENGTH = 30
 const MAX_LAST_NAME_LENGTH = 30
 
 const initialFormData: FormData = {
-  email: "",
-  firstName: "",
-  lastName: "",
-  phone: "",
-  password: "",
-  confirmPassword: "",
-}
-
-const GOOGLE_SIGNUP_PREFILL_KEY = "propbol_google_signup_prefill"
-
-function buildGoogleMissingFieldsMessage(missingFields: GoogleSignupMissingField[]) {
-  if (missingFields.length === 0) {
-    return ""
-  }
-
-  const labels: Record<GoogleSignupMissingField, string> = {
-    email: "el correo electrónico",
-    firstName: "el nombre",
-    lastName: "el apellido",
-  }
-
-  if (missingFields.length === 1) {
-    return `Google no devolvió ${labels[missingFields[0]]} de la cuenta.`
-  }
-
-  if (missingFields.length === 2) {
-    return `Google no devolvió ${labels[missingFields[0]]} ni ${labels[missingFields[1]]} de la cuenta.`
-  }
-
-  return "Google no devolvió el correo electrónico, el nombre ni el apellido de la cuenta."
-}
-
-function buildGoogleFieldErrors(
-  missingFields: GoogleSignupMissingField[]
-): Pick<FormErrors, "email" | "firstName" | "lastName"> {
-  return {
-    email: missingFields.includes("email") ? "Google no devolvió el correo electrónico" : undefined,
-    firstName: missingFields.includes("firstName") ? "Google no devolvió el nombre" : undefined,
-    lastName: missingFields.includes("lastName") ? "Google no devolvió el apellido" : undefined,
-  }
+  email: '',
+  firstName: '',
+  lastName: '',
+  phone: '',
+  password: '',
+  confirmPassword: ''
 }
 
 function getInputClasses(hasError?: boolean, hasRightIcon?: boolean) {
   return [
-    "w-full rounded-md border bg-white pl-9 py-2.5 outline-none",
-    hasRightIcon ? "pr-10" : "pr-3",
-    "text-[12px] text-[#292524] placeholder:text-[#78716c] transition-all duration-200",
+    'w-full rounded-md border bg-white pl-9 py-2.5 outline-none',
+    hasRightIcon ? 'pr-10' : 'pr-3',
+    'text-[12px] text-[#292524] placeholder:text-[#78716c] transition-all duration-200',
     hasError
-      ? "border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-200"
-      : "border-[#d6d3d1] focus:border-[#D97706] focus:ring-1 focus:ring-amber-200",
-  ].join(" ")
+      ? 'border-red-400 focus:border-red-400 focus:ring-1 focus:ring-red-200'
+      : 'border-[#d6d3d1] focus:border-[#D97706] focus:ring-1 focus:ring-amber-200'
+  ].join(' ')
 }
 
 function FieldError({ id, error }: { id: string; error?: string }) {
@@ -125,7 +77,7 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: React.Re
 
 export default function SignUpForm() {
   const router = useRouter()
-  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000"
+  const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:5000'
 
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [errors, setErrors] = useState<FormErrors>({})
@@ -134,149 +86,117 @@ export default function SignUpForm() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const passwordContainerRef = useRef<HTMLDivElement>(null)
   const confirmPasswordContainerRef = useRef<HTMLDivElement>(null)
-  const [serverError, setServerError] = useState("")
+  const [serverError, setServerError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const onlyLettersRegex = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]+$/
   const onlyNumbersRegex = /^[0-9]*$/
 
   useEffect(() => {
-    const token = localStorage.getItem("token")
+    const token = localStorage.getItem('token')
     if (token) {
-      router.replace("/")
+      router.replace('/')
     }
   }, [router])
 
-  useEffect(() => {
-    const googlePrefill = consumeGoogleSignupPrefill()
-
-    if (!googlePrefill) {
-      return
-    }
-
-    const missingFields = getMissingGoogleSignupFields(googlePrefill)
-
-    setFormData((prev) => ({
-      ...prev,
-      email: googlePrefill.email?.trim() || prev.email,
-      firstName: googlePrefill.firstName?.trim() || prev.firstName,
-      lastName: googlePrefill.lastName?.trim() || prev.lastName,
-    }))
-
-    setErrors((prev) => ({
-      ...prev,
-      ...buildGoogleFieldErrors(missingFields),
-    }))
-
-    setTouched((prev) => ({
-      ...prev,
-      email: missingFields.includes("email"),
-      firstName: missingFields.includes("firstName"),
-      lastName: missingFields.includes("lastName"),
-    }))
-
-    setServerError(buildGoogleMissingFieldsMessage(missingFields))
-  }, [])
-
   const validateFirstName = (value: string) => {
     const trimmed = value.trim()
-    if (trimmed === "") return "El campo no puede estar vacío"
+    if (trimmed === '') return 'El campo no puede estar vacío'
     if (trimmed.length > MAX_NAME_LENGTH) {
       return `El nombre no puede superar ${MAX_NAME_LENGTH} caracteres`
     }
     if (!onlyLettersRegex.test(value)) {
-      return "El nombre solo puede contener letras"
+      return 'El nombre solo puede contener letras'
     }
     return undefined
   }
 
   const validateLastName = (value: string) => {
     const trimmed = value.trim()
-    if (trimmed === "") return "El campo no puede estar vacío"
+    if (trimmed === '') return 'El campo no puede estar vacío'
     if (trimmed.length > MAX_LAST_NAME_LENGTH) {
       return `El apellido no puede superar ${MAX_LAST_NAME_LENGTH} caracteres`
     }
     if (!onlyLettersRegex.test(value)) {
-      return "El apellido solo puede contener letras"
+      return 'El apellido solo puede contener letras'
     }
     return undefined
   }
 
   const validatePhone = (value: string) => {
     const trimmed = value.trim()
-    if (trimmed === "") return "El campo no puede estar vacío"
+    if (trimmed === '') return 'El campo no puede estar vacío'
     if (!onlyNumbersRegex.test(value)) {
-      return "El teléfono solo permite números"
+      return 'El teléfono solo permite números'
     }
     return undefined
   }
 
   const validateConfirmPassword = (value: string, password: string) => {
-    if (value.trim() === "") return "El campo no puede estar vacío"
-    if (value !== password) return "Las contraseñas no coinciden"
+    if (value.trim() === '') return 'El campo no puede estar vacío'
+    if (value !== password) return 'Las contraseñas no coinciden'
     return undefined
   }
 
-  const handleChange =
-    (field: keyof FormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
-      const rawValue = event.target.value
-      const value = field === "email" ? rawValue.trimStart() : rawValue
+  const handleChange = (field: keyof FormData) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = event.target.value
+    const value = field === 'email' ? rawValue.trimStart() : rawValue
 
-      setFormData((prev) => ({ ...prev, [field]: value }))
-      setServerError("")
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    setServerError('')
 
-      if (field === "email") {
-        setErrors((prev) => ({ ...prev, email: validateEmail(value) || undefined }))
-      }
-      if (field === "firstName") {
-        setErrors((prev) => ({ ...prev, firstName: validateFirstName(value) }))
-      }
-      if (field === "lastName") {
-        setErrors((prev) => ({ ...prev, lastName: validateLastName(value) }))
-      }
-      if (field === "phone") {
-        setErrors((prev) => ({ ...prev, phone: validatePhone(value) }))
-      }
-      if (field === "password") {
-        const passwordError = validatePassword(value)
-        setErrors((prev) => ({
-          ...prev,
-          password: passwordError || undefined,
-          confirmPassword:
-            formData.confirmPassword.trim() === ""
-              ? prev.confirmPassword
-              : validateConfirmPassword(formData.confirmPassword, value),
-        }))
-      }
-      if (field === "confirmPassword") {
-        setErrors((prev) => ({
-          ...prev,
-          confirmPassword: validateConfirmPassword(value, formData.password),
-        }))
-      }
+    if (field === 'email') {
+      setErrors((prev) => ({ ...prev, email: validateEmail(value) || undefined }))
     }
+    if (field === 'firstName') {
+      setErrors((prev) => ({ ...prev, firstName: validateFirstName(value) }))
+    }
+    if (field === 'lastName') {
+      setErrors((prev) => ({ ...prev, lastName: validateLastName(value) }))
+    }
+    if (field === 'phone') {
+      setErrors((prev) => ({ ...prev, phone: validatePhone(value) }))
+    }
+    if (field === 'password') {
+      const passwordError = validatePassword(value)
+      setErrors((prev) => ({
+        ...prev,
+        password: passwordError || undefined,
+        confirmPassword:
+          formData.confirmPassword.trim() === ''
+            ? prev.confirmPassword
+            : validateConfirmPassword(formData.confirmPassword, value)
+      }))
+    }
+    if (field === 'confirmPassword') {
+      setErrors((prev) => ({
+        ...prev,
+        confirmPassword: validateConfirmPassword(value, formData.password)
+      }))
+    }
+  }
 
   const handleBlur = (field: keyof FormData) => () => {
     setTouched((prev) => ({ ...prev, [field]: true }))
 
-    if (field === "email") {
+    if (field === 'email') {
       setErrors((prev) => ({ ...prev, email: validateEmail(formData.email) || undefined }))
     }
-    if (field === "firstName") {
+    if (field === 'firstName') {
       setErrors((prev) => ({ ...prev, firstName: validateFirstName(formData.firstName) }))
     }
-    if (field === "lastName") {
+    if (field === 'lastName') {
       setErrors((prev) => ({ ...prev, lastName: validateLastName(formData.lastName) }))
     }
-    if (field === "phone") {
+    if (field === 'phone') {
       setErrors((prev) => ({ ...prev, phone: validatePhone(formData.phone) }))
     }
-    if (field === "password") {
+    if (field === 'password') {
       setErrors((prev) => ({ ...prev, password: validatePassword(formData.password) || undefined }))
     }
-    if (field === "confirmPassword") {
+    if (field === 'confirmPassword') {
       setErrors((prev) => ({
         ...prev,
-        confirmPassword: validateConfirmPassword(formData.confirmPassword, formData.password),
+        confirmPassword: validateConfirmPassword(formData.confirmPassword, formData.password)
       }))
     }
   }
@@ -287,10 +207,8 @@ export default function SignUpForm() {
     setTouched({})
     setShowPassword(false)
     setShowConfirmPassword(false)
-    setServerError("")
+    setServerError('')
     setIsSubmitting(false)
-
-    sessionStorage.removeItem(GOOGLE_SIGNUP_PREFILL_KEY)
   }, [])
 
   const handleCancelRegister = useCallback(() => {
@@ -298,17 +216,17 @@ export default function SignUpForm() {
   }, [resetRegisterForm])
 
   const handleGoToHomePage = useCallback(() => {
-    router.push("/")
+    router.push('/')
   }, [router])
 
   const isFormValid = useMemo(() => {
     const requiredFieldsCompleted =
-      formData.email.trim() !== "" &&
-      formData.firstName.trim() !== "" &&
-      formData.lastName.trim() !== "" &&
-      formData.phone.trim() !== "" &&
-      formData.password.trim() !== "" &&
-      formData.confirmPassword.trim() !== ""
+      formData.email.trim() !== '' &&
+      formData.firstName.trim() !== '' &&
+      formData.lastName.trim() !== '' &&
+      formData.phone.trim() !== '' &&
+      formData.password.trim() !== '' &&
+      formData.confirmPassword.trim() !== ''
 
     return (
       requiredFieldsCompleted &&
@@ -326,7 +244,7 @@ export default function SignUpForm() {
 
     if (isSubmitting) return
 
-    setServerError("")
+    setServerError('')
 
     const newErrors: FormErrors = {
       email: validateEmail(formData.email) || undefined,
@@ -334,7 +252,7 @@ export default function SignUpForm() {
       lastName: validateLastName(formData.lastName),
       phone: validatePhone(formData.phone),
       password: validatePassword(formData.password) || undefined,
-      confirmPassword: validateConfirmPassword(formData.confirmPassword, formData.password),
+      confirmPassword: validateConfirmPassword(formData.confirmPassword, formData.password)
     }
 
     setErrors(newErrors)
@@ -344,7 +262,7 @@ export default function SignUpForm() {
       lastName: true,
       phone: true,
       password: true,
-      confirmPassword: true,
+      confirmPassword: true
     })
 
     if (Object.values(newErrors).some(Boolean)) {
@@ -357,16 +275,16 @@ export default function SignUpForm() {
       correo: formData.email.trim().toLowerCase(),
       telefono: formData.phone.trim(),
       password: formData.password.trim(),
-      confirmPassword: formData.confirmPassword.trim(),
+      confirmPassword: formData.confirmPassword.trim()
     }
 
     setIsSubmitting(true)
 
     try {
       const response = await fetch(`${API_URL}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       })
 
       let data: RegisterResponse | null = null
@@ -378,66 +296,72 @@ export default function SignUpForm() {
       }
 
       if (!response.ok) {
-        throw new Error(data?.message || "No se pudo completar el registro")
+        throw new Error(data?.message || 'No se pudo completar el registro')
       }
 
       if (!data?.verificationToken || !data?.email) {
-        throw new Error("No se recibió la verificación del registro")
+        throw new Error('No se recibió la verificación del registro')
       }
 
-      sessionStorage.setItem("pendingRegisterToken", data.verificationToken)
-      sessionStorage.setItem("pendingRegisterPassword", formData.password.trim())
-      sessionStorage.setItem("pendingRegisterEmail", data.email)
+      sessionStorage.setItem('pendingRegisterToken', data.verificationToken)
+      sessionStorage.setItem('pendingRegisterPassword', formData.password.trim())
+      sessionStorage.setItem('pendingRegisterEmail', data.email)
       sessionStorage.setItem(
-        "register_success_message",
-        data.message || "Te enviamos un código de verificación a tu correo."
+        'register_success_message',
+        data.message || 'Te enviamos un código de verificación a tu correo.'
       )
 
-      router.replace("/verify-email")
+      router.replace('/verify-email')
     } catch (error) {
       const message =
         error instanceof TypeError
-          ? "No hay conexión a internet o no se pudo conectar con el servidor"
+          ? 'No hay conexión a internet o no se pudo conectar con el servidor'
           : error instanceof Error
             ? error.message
-            : "No se pudo completar el registro"
+            : 'No se pudo completar el registro'
 
       setServerError(message)
-      console.error("Error al registrar:", error)
+      console.error('Error al registrar:', error)
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  const handleGoogleCredential = useCallback((credential: string) => {
-    setServerError("")
+  const handleGoogleSuccess = useCallback(
+    ({
+      token,
+      user,
+      isNewUser,
+      message
+    }: {
+      token: string
+      user: {
+        id: number
+        correo: string
+        nombre: string
+        apellido: string
+      }
+      isNewUser: boolean
+      message: string
+    }) => {
+      localStorage.setItem('token', token)
+      localStorage.setItem('user', JSON.stringify(user))
 
-    const { prefill: googlePrefill, missingFields } =
-      extractGooglePrefillValidationFromCredential(credential)
+      sessionStorage.setItem(
+        'auth_success_message',
+        isNewUser
+          ? 'Tu cuenta fue creada con Google correctamente.'
+          : 'Inicio de sesión con Google exitoso.'
+      )
 
-    if (!googlePrefill) {
-      setServerError("No se pudieron obtener los datos de la cuenta de Google.")
-      return
-    }
+      if (message) {
+        sessionStorage.setItem('auth_success_backend_message', message)
+      }
 
-    setFormData((prev) => ({
-      ...prev,
-      email: googlePrefill.email || prev.email,
-      firstName: googlePrefill.firstName || prev.firstName,
-      lastName: googlePrefill.lastName || prev.lastName,
-    }))
-
-    setErrors((prev) => ({ ...prev, ...buildGoogleFieldErrors(missingFields) }))
-
-    setTouched((prev) => ({
-      ...prev,
-      email: missingFields.includes("email"),
-      firstName: missingFields.includes("firstName"),
-      lastName: missingFields.includes("lastName"),
-    }))
-
-    setServerError(buildGoogleMissingFieldsMessage(missingFields))
-  }, [])
+      router.replace('/')
+    },
+    [router]
+  )
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#f5f5f4] px-4 py-8">
@@ -472,8 +396,8 @@ export default function SignUpForm() {
                   type="email"
                   autoFocus
                   value={formData.email}
-                  onChange={handleChange("email")}
-                  onBlur={handleBlur("email")}
+                  onChange={handleChange('email')}
+                  onBlur={handleBlur('email')}
                   placeholder="Ingresa tu correo electrónico"
                   className={getInputClasses(Boolean(touched.email && errors.email))}
                   aria-invalid={Boolean(touched.email && errors.email)}
@@ -492,8 +416,8 @@ export default function SignUpForm() {
                   name="firstName"
                   type="text"
                   value={formData.firstName}
-                  onChange={handleChange("firstName")}
-                  onBlur={handleBlur("firstName")}
+                  onChange={handleChange('firstName')}
+                  onBlur={handleBlur('firstName')}
                   placeholder="Ingresa tu nombre"
                   className={getInputClasses(Boolean(touched.firstName && errors.firstName))}
                   aria-invalid={Boolean(touched.firstName && errors.firstName)}
@@ -515,8 +439,8 @@ export default function SignUpForm() {
                   name="lastName"
                   type="text"
                   value={formData.lastName}
-                  onChange={handleChange("lastName")}
-                  onBlur={handleBlur("lastName")}
+                  onChange={handleChange('lastName')}
+                  onBlur={handleBlur('lastName')}
                   placeholder="Ingresa tu apellido"
                   className={getInputClasses(Boolean(touched.lastName && errors.lastName))}
                   aria-invalid={Boolean(touched.lastName && errors.lastName)}
@@ -538,8 +462,8 @@ export default function SignUpForm() {
                   name="phone"
                   type="text"
                   value={formData.phone}
-                  onChange={handleChange("phone")}
-                  onBlur={handleBlur("phone")}
+                  onChange={handleChange('phone')}
+                  onBlur={handleBlur('phone')}
                   placeholder="Ingresa tu numero de telefono"
                   className={getInputClasses(Boolean(touched.phone && errors.phone))}
                   aria-invalid={Boolean(touched.phone && errors.phone)}
@@ -557,7 +481,7 @@ export default function SignUpForm() {
                 onBlur={(e) => {
                   if (!passwordContainerRef.current?.contains(e.relatedTarget as Node)) {
                     setShowPassword(false)
-                    handleBlur("password")()
+                    handleBlur('password')()
                   }
                 }}
               >
@@ -565,9 +489,9 @@ export default function SignUpForm() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? "text" : "password"}
+                  type={showPassword ? 'text' : 'password'}
                   value={formData.password}
-                  onChange={handleChange("password")}
+                  onChange={handleChange('password')}
                   placeholder="Ingresa tu contraseña"
                   maxLength={255}
                   className={`${getInputClasses(
@@ -581,7 +505,7 @@ export default function SignUpForm() {
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#78716c] hover:bg-[#f5f5f4] hover:text-[#292524]"
-                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
@@ -600,7 +524,7 @@ export default function SignUpForm() {
                 onBlur={(e) => {
                   if (!confirmPasswordContainerRef.current?.contains(e.relatedTarget as Node)) {
                     setShowConfirmPassword(false)
-                    handleBlur("confirmPassword")()
+                    handleBlur('confirmPassword')()
                   }
                 }}
               >
@@ -608,9 +532,9 @@ export default function SignUpForm() {
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
-                  type={showConfirmPassword ? "text" : "password"}
+                  type={showConfirmPassword ? 'text' : 'password'}
                   value={formData.confirmPassword}
-                  onChange={handleChange("confirmPassword")}
+                  onChange={handleChange('confirmPassword')}
                   placeholder="Ingresa tu contraseña"
                   maxLength={255}
                   className={`${getInputClasses(
@@ -626,8 +550,8 @@ export default function SignUpForm() {
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[#78716c] hover:bg-[#f5f5f4] hover:text-[#292524]"
                   aria-label={
                     showConfirmPassword
-                      ? "Ocultar confirmación de contraseña"
-                      : "Mostrar confirmación de contraseña"
+                      ? 'Ocultar confirmación de contraseña'
+                      : 'Mostrar confirmación de contraseña'
                   }
                 >
                   {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
@@ -645,16 +569,16 @@ export default function SignUpForm() {
                 disabled={!isFormValid || isSubmitting}
                 className={`w-full rounded-md px-4 py-2.5 text-[13px] font-semibold transition ${
                   isFormValid && !isSubmitting
-                    ? "bg-amber-500 text-white hover:bg-amber-600"
-                    : "cursor-not-allowed bg-[#e7e5e4] text-[#78716c]"
+                    ? 'bg-amber-500 text-white hover:bg-amber-600'
+                    : 'cursor-not-allowed bg-[#e7e5e4] text-[#78716c]'
                 }`}
               >
-                {isSubmitting ? "Registrando..." : "Registrarse"}
+                {isSubmitting ? 'Registrando...' : 'Registrarse'}
               </button>
             </div>
 
             <GoogleRegisterButton
-              onCredentialReceived={handleGoogleCredential}
+              onSuccess={handleGoogleSuccess}
               onError={setServerError}
               disabled={isSubmitting}
             />
@@ -676,7 +600,7 @@ export default function SignUpForm() {
             </button>
 
             <p className="pt-1 text-center text-[12px] text-[#78716c]">
-              ¿Ya tienes una cuenta?{" "}
+              ¿Ya tienes una cuenta?{' '}
               <Link
                 href="/sign-in"
                 className="font-medium text-amber-600 transition hover:text-amber-700"
