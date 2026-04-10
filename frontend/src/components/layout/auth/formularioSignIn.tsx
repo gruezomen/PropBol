@@ -28,9 +28,10 @@ type MeResponse = {
 }
 
 type GooglePopupSuccessMessage = {
-  type: 'propbol:google-login-success'
+  type: 'propbol:google-auth-success'
   message: string
   token: string
+  isNewUser: boolean
   user: {
     id: number
     correo: string
@@ -40,7 +41,7 @@ type GooglePopupSuccessMessage = {
 }
 
 type GooglePopupErrorMessage = {
-  type: 'propbol:google-login-error'
+  type: 'propbol:google-auth-error'
   code: 'GOOGLE_AUTH_FAILED' | 'ACCOUNT_NOT_REGISTERED' | string
   message: string
 }
@@ -296,7 +297,7 @@ export default function LoginForm() {
       authWasResolved = true
       cleanup(false)
 
-      if (event.data.type === 'propbol:google-login-success') {
+      if (event.data.type === 'propbol:google-auth-success') {
         try {
           await finalizeValidatedSession(event.data.token, event.data.user)
           setSuccessMessage(event.data.message || 'Inicio de sesión con Google exitoso')
@@ -476,7 +477,6 @@ export default function LoginForm() {
             className="relative"
             ref={passwordContainerRef}
             onBlur={(e) => {
-              // Si el foco sale completamente del contenedor (input + botón), ocultar
               if (!passwordContainerRef.current?.contains(e.relatedTarget as Node)) {
                 setShowPassword(false)
               }
